@@ -58,6 +58,13 @@
     --status-online: 145 65% 42%;
     --status-offline: 0 72% 51%;
 
+    /* Syntax highlighting - Light Mode (high contrast for white bg) */
+    --syntax-keyword: 215 80% 40%;
+    --syntax-command: 195 70% 35%;
+    --syntax-state: 145 70% 32%;
+    --syntax-retention: 270 60% 45%;
+    --syntax-number: 25 80% 40%;
+    --syntax-comment: 0 0% 50%;
     --sidebar-background: 297 47% 96%;
     --sidebar-foreground: 297 66% 25%;
     --sidebar-primary: 297 66% 14%;
@@ -132,6 +139,13 @@
     --status-online: 145 70% 50%;
     --status-offline: 0 72% 55%;
 
+    /* Syntax highlighting - Dark Mode (soft for dark bg) */
+    --syntax-keyword: 215 85% 65%;
+    --syntax-command: 190 80% 65%;
+    --syntax-state: 145 65% 60%;
+    --syntax-retention: 270 70% 70%;
+    --syntax-number: 35 85% 65%;
+    --syntax-comment: 0 0% 55%;
     --sidebar-background: 297 3% 13%;
     --sidebar-foreground: 57 57% 95%;
     --sidebar-primary: 177 50% 55%;
@@ -228,5 +242,25 @@
   }
   .text-status-offline {
     color: hsl(var(--status-offline));
+  }
+
+  /* Syntax highlighting utilities */
+  .text-syntax-keyword {
+    color: hsl(var(--syntax-keyword));
+  }
+  .text-syntax-command {
+    color: hsl(var(--syntax-command));
+  }
+  .text-syntax-state {
+    color: hsl(var(--syntax-state));
+  }
+  .text-syntax-retention {
+    color: hsl(var(--syntax-retention));
+  }
+  .text-syntax-number {
+    color: hsl(var(--syntax-number));
+  }
+  .text-syntax-comment {
+    color: hsl(var(--syntax-comment));
   }
 }
