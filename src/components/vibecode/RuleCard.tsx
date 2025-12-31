@@ -18,7 +18,7 @@ export function RuleCard({ rule, isViolated, isHighlighted, onClick }: RuleCardP
         'hover:bg-accent/50',
         isViolated
           ? 'border-destructive/50 bg-destructive/10'
-          : 'border-cell-done/50 bg-cell-done/10',
+          : 'border-state-done/50 bg-state-done/10',
         isHighlighted && 'ring-2 ring-primary'
       )}
     >
@@ -26,12 +26,12 @@ export function RuleCard({ rule, isViolated, isHighlighted, onClick }: RuleCardP
         {isViolated ? (
           <XCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
         ) : (
-          <CheckCircle className="h-4 w-4 text-cell-done shrink-0 mt-0.5" />
+          <CheckCircle className="h-4 w-4 text-state-done shrink-0 mt-0.5" />
         )}
         <div className="flex-1 min-w-0">
           <p className={cn(
             'text-sm font-medium',
-            isViolated ? 'text-destructive' : 'text-cell-done'
+            isViolated ? 'text-destructive' : 'text-state-done'
           )}>
             {rule.name}
           </p>

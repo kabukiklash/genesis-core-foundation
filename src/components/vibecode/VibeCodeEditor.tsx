@@ -45,7 +45,7 @@ export function VibeCodeEditor({ code, onChange, issues, highlightedLine }: Vibe
     KEYWORDS.forEach(kw => {
       result = result.replace(
         new RegExp(`\\b(${kw})\\b`, 'g'),
-        '<span class="text-primary font-semibold">$1</span>'
+        '<span class="text-blue-400 font-semibold">$1</span>'
       );
     });
 
@@ -53,7 +53,7 @@ export function VibeCodeEditor({ code, onChange, issues, highlightedLine }: Vibe
     COMMANDS.forEach(cmd => {
       result = result.replace(
         new RegExp(`\\b(${cmd})\\b`, 'g'),
-        '<span class="text-cyan-400">$1</span>'
+        '<span class="text-sky-300">$1</span>'
       );
     });
 
@@ -61,7 +61,7 @@ export function VibeCodeEditor({ code, onChange, issues, highlightedLine }: Vibe
     STATES.forEach(state => {
       result = result.replace(
         new RegExp(`\\b(${state})\\b`, 'g'),
-        '<span class="text-cell-done">$1</span>'
+        '<span class="text-emerald-400">$1</span>'
       );
     });
 
@@ -69,14 +69,14 @@ export function VibeCodeEditor({ code, onChange, issues, highlightedLine }: Vibe
     RETENTIONS.forEach(ret => {
       result = result.replace(
         new RegExp(`\\b(${ret})\\b`, 'g'),
-        '<span class="text-purple-400">$1</span>'
+        '<span class="text-violet-400">$1</span>'
       );
     });
 
     // Highlight numbers
     result = result.replace(
       /\b(\d+)\b/g,
-      '<span class="text-orange-400">$1</span>'
+      '<span class="text-amber-300">$1</span>'
     );
 
     // Highlight comments
