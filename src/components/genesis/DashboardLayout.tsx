@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Boxes,
   Activity,
+  Code,
   Menu,
   X,
 } from 'lucide-react';
@@ -16,6 +17,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'GenesisCells', href: '/cells', icon: Boxes },
   { name: 'Runtime', href: '/runtime', icon: Activity },
+  { name: 'VibeCode', href: '/vibecode', icon: Code },
 ];
 
 export function DashboardLayout() {
