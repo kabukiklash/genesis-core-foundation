@@ -1,0 +1,741 @@
+openapi: 3.1.0
+info:
+  title: GenesisCore API
+  description: |
+    API REST passiva e auditável para o GenesisCore Runtime.
+    
+    ## Princípios
+    
+    - **Passiva**: Endpoints apenas observam e registram, nunca executam lógica ativa
+    - **Auditável**: Toda operação gera log
+    - **Versionada**: Suporte a múltiplas versões simultâneas
+    - **Neutra**: Nenhum cliente recebe tratamento preferencial
+    
+    ## Autenticação
+    
+    Todas as requisições devem incluir um API key válido:
+    
+    ```
+    Authorization: Bearer <api_key>
+    ```
+    
+  version: 1.0.0
+  contact:
+    name: GenesisCore Team
+  license:
+    name: MIT
+
+servers:
+  - url: https://api.genesiscore.dev/v1
+    description: Production
+  - url: https://staging-api.genesiscore.dev/v1
+    description: Staging
+  - url: http://localhost:3000/v1
+    description: Local Development
+
+tags:
+  - name: GPP
+    description: Genesis Payload Protocol - Ingestão de dados
+  - name: Cells
+    description: Operações com GenesisCells
+  - name: Log
+    description: Histórico e auditoria
+  - name: Metrics
+    description: Métricas e observabilidade
+  - name: WebSocket
+    description: Eventos em tempo real
+
+paths:
+  /gpp/ingest:
+    post:
+      tags:
+        - GPP
+      summary: Ingerir payload GPP
+      description: |
+        Recebe um payload no formato GPP (Genesis Payload Protocol) e cria as GenesisCells correspondentes.
+        
+        Este endpoint valida o payload contra as regras PER (Passive Execution Rules) antes de aceitar.
+      operationId: ingestGPP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GPPPayload'
+            example:
+              workflow: "OrderProcessing"
+              type: "ORDER"
+              retention: "LONG"
+              events:
+                - name: "CREATED"
+                  commands:
+                    - action: "set"
+                      target: "state"
+                      value: "CANDIDATE"
+                    - action: "set"
+                      target: "friction"
+                      value: 5
+      responses:
+        '201':
+          description: Payload ingerido com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+        '400':
+          description: Payload inválido ou violação PER
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PERViolationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /cells:
+    get:
+      tags:
+        - Cells
+      summary: Listar GenesisCells
+      description: Retorna lista paginada de GenesisCells com filtros opcionais.
+      operationId: listCells
+      parameters:
+        - $ref: '#/components/parameters/StateFilter'
+        - $ref: '#/components/parameters/RetentionFilter'
+        - $ref: '#/components/parameters/FrictionMin'
+        - $ref: '#/components/parameters/FrictionMax'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Lista de cells
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CellListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /cells/{cellId}:
+    get:
+      tags:
+        - Cells
+      summary: Obter GenesisCell
+      description: Retorna uma GenesisCell específica pelo ID.
+      operationId: getCell
+      parameters:
+        - $ref: '#/components/parameters/CellId'
+      responses:
+        '200':
+          description: Cell encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CellResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /cells/{cellId}/history:
+    get:
+      tags:
+        - Cells
+      summary: Histórico de transições
+      description: Retorna o histórico de transições de estado de uma GenesisCell.
+      operationId: getCellHistory
+      parameters:
+        - $ref: '#/components/parameters/CellId'
+      responses:
+        '200':
+          description: Histórico de transições
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /log:
+    get:
+      tags:
+        - Log
+      summary: Log de eventos
+      description: Retorna log de eventos do sistema (auditoria).
+      operationId: getLog
+      parameters:
+        - name: since
+          in: query
+          description: Timestamp mínimo (ms)
+          schema:
+            type: integer
+            format: int64
+        - name: until
+          in: query
+          description: Timestamp máximo (ms)
+          schema:
+            type: integer
+            format: int64
+        - name: type
+          in: query
+          description: Filtrar por tipo de evento
+          schema:
+            type: string
+            enum:
+              - cell_created
+              - state_changed
+              - friction_updated
+              - gpp_ingested
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Log de eventos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /metrics:
+    get:
+      tags:
+        - Metrics
+      summary: Métricas do runtime
+      description: Retorna métricas atuais do GenesisCore Runtime.
+      operationId: getMetrics
+      responses:
+        '200':
+          description: Métricas do runtime
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /metrics/friction/{cellId}:
+    get:
+      tags:
+        - Metrics
+      summary: Histórico de fricção
+      description: Retorna o histórico de fricção de uma GenesisCell.
+      operationId: getFrictionHistory
+      parameters:
+        - $ref: '#/components/parameters/CellId'
+      responses:
+        '200':
+          description: Histórico de fricção
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrictionHistoryResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /metrics/trends:
+    get:
+      tags:
+        - Metrics
+      summary: Tendências do runtime
+      description: Retorna tendências históricas do runtime.
+      operationId: getMetricsTrends
+      parameters:
+        - name: hours
+          in: query
+          description: Número de horas para análise
+          schema:
+            type: integer
+            default: 24
+            minimum: 1
+            maximum: 168
+      responses:
+        '200':
+          description: Tendências
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  schemas:
+    CellState:
+      type: string
+      enum:
+        - CANDIDATE
+        - RUNNING
+        - COOLING
+        - DONE
+        - ERROR
+      description: Estado da GenesisCell
+
+    RetentionType:
+      type: string
+      enum:
+        - EPHEMERAL
+        - LONG
+      description: Política de retenção
+
+    GenesisCell:
+      type: object
+      required:
+        - id
+        - payload
+        - state
+        - friction
+        - retention
+        - created_at_ms
+        - updated_at_ms
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador único
+        payload:
+          type: object
+          description: Dados arbitrários
+        state:
+          $ref: '#/components/schemas/CellState'
+        friction:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Nível de fricção (0-100)
+        retention:
+          $ref: '#/components/schemas/RetentionType'
+        created_at_ms:
+          type: integer
+          format: int64
+          description: Timestamp de criação
+        updated_at_ms:
+          type: integer
+          format: int64
+          description: Timestamp de atualização
+        version:
+          type: integer
+          description: Versão para optimistic locking
+        intent:
+          type: string
+          description: Descrição semântica opcional
+
+    StateTransition:
+      type: object
+      required:
+        - id
+        - cell_id
+        - to_state
+        - friction_at_transition
+        - timestamp_ms
+      properties:
+        id:
+          type: string
+          format: uuid
+        cell_id:
+          type: string
+          format: uuid
+        from_state:
+          $ref: '#/components/schemas/CellState'
+        to_state:
+          $ref: '#/components/schemas/CellState'
+        friction_at_transition:
+          type: integer
+          minimum: 0
+          maximum: 100
+        timestamp_ms:
+          type: integer
+          format: int64
+
+    GPPPayload:
+      type: object
+      required:
+        - workflow
+        - type
+        - retention
+        - events
+      properties:
+        workflow:
+          type: string
+          description: Nome do workflow
+        type:
+          type: string
+          description: Tipo da entidade
+        retention:
+          $ref: '#/components/schemas/RetentionType'
+        payload:
+          type: object
+          description: Dados iniciais opcionais
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/GPPEvent'
+
+    GPPEvent:
+      type: object
+      required:
+        - name
+        - commands
+      properties:
+        name:
+          type: string
+          description: Nome do evento
+        commands:
+          type: array
+          items:
+            $ref: '#/components/schemas/GPPCommand'
+
+    GPPCommand:
+      type: object
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          enum:
+            - set
+            - increase
+          description: Ação passiva
+        target:
+          type: string
+          enum:
+            - state
+            - friction
+          description: Alvo da ação
+        value:
+          oneOf:
+            - type: string
+            - type: integer
+          description: Valor a definir
+
+    IngestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        cell_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CellResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/GenesisCell'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    CellListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GenesisCell'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    HistoryResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/StateTransition'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    LogEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+        cell_id:
+          type: string
+          format: uuid
+        details:
+          type: object
+        timestamp_ms:
+          type: integer
+          format: int64
+
+    LogResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/LogEntry'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    RuntimeMetrics:
+      type: object
+      properties:
+        wasm_executions_total:
+          type: integer
+        wasm_executions_last_hour:
+          type: integer
+        avg_execution_time_ms:
+          type: number
+        memory_usage_mb:
+          type: number
+        active_scripts:
+          type: integer
+        uptime_seconds:
+          type: integer
+        status:
+          type: string
+          enum:
+            - online
+            - offline
+        last_updated_ms:
+          type: integer
+          format: int64
+
+    MetricsResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/RuntimeMetrics'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    FrictionPoint:
+      type: object
+      properties:
+        friction:
+          type: integer
+          minimum: 0
+          maximum: 100
+        timestamp_ms:
+          type: integer
+          format: int64
+
+    FrictionHistoryResponse:
+      type: object
+      properties:
+        cell_id:
+          type: string
+          format: uuid
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FrictionPoint'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    TrendPoint:
+      type: object
+      properties:
+        timestamp_ms:
+          type: integer
+          format: int64
+        executions:
+          type: integer
+        avg_time_ms:
+          type: number
+        memory_mb:
+          type: number
+
+    TrendsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrendPoint'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    PERViolationError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "PER_VIOLATION"
+        message:
+          type: string
+        violations:
+          type: array
+          items:
+            type: object
+            properties:
+              rule:
+                type: string
+                example: "PER-008"
+              message:
+                type: string
+
+    ResponseMeta:
+      type: object
+      properties:
+        timestamp_ms:
+          type: integer
+          format: int64
+        version:
+          type: string
+          example: "1.0.0"
+
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total_pages:
+          type: integer
+
+  parameters:
+    CellId:
+      name: cellId
+      in: path
+      required: true
+      description: ID da GenesisCell
+      schema:
+        type: string
+        format: uuid
+
+    StateFilter:
+      name: state
+      in: query
+      description: Filtrar por estado(s)
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/CellState'
+
+    RetentionFilter:
+      name: retention
+      in: query
+      description: Filtrar por retenção
+      schema:
+        $ref: '#/components/schemas/RetentionType'
+
+    FrictionMin:
+      name: friction_min
+      in: query
+      description: Fricção mínima
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 100
+
+    FrictionMax:
+      name: friction_max
+      in: query
+      description: Fricção máxima
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 100
+
+    Search:
+      name: search
+      in: query
+      description: Busca textual
+      schema:
+        type: string
+
+    Page:
+      name: page
+      in: query
+      description: Número da página
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+
+    PerPage:
+      name: per_page
+      in: query
+      description: Itens por página
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+
+  responses:
+    Unauthorized:
+      description: Não autorizado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "UNAUTHORIZED"
+              message:
+                type: string
+                example: "Invalid or missing API key"
+
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "NOT_FOUND"
+              message:
+                type: string
+
+    RateLimited:
+      description: Rate limit excedido
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "RATE_LIMITED"
+              message:
+                type: string
+              retry_after:
+                type: integer
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: API Key do GenesisCore
+
+security:
+  - BearerAuth: []
