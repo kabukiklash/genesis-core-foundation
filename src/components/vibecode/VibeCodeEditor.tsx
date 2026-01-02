@@ -91,20 +91,29 @@ export function VibeCodeEditor({ code, onChange, issues, highlightedLine }: Vibe
   const lines = code.split('\n');
 
   return (
-    <div className="flex flex-col h-full border rounded-lg overflow-hidden bg-card">
-      <div className="px-4 py-2 border-b bg-muted/30">
+    <div className="flex flex-col h-full overflow-hidden bg-editor-bg">
+      {/* Editor header */}
+      <div className="flex-shrink-0 px-4 py-2 border-b bg-muted/30 flex items-center justify-between">
         <span className="text-sm font-medium">Editor VibeCode</span>
+        <span className="text-xs text-muted-foreground font-mono">
+          Ln {lines.length} | {issues.length} issues
+        </span>
       </div>
-      <div className="flex-1 flex overflow-hidden">
-        {/* Line numbers */}
-        <div className="w-10 bg-muted/50 border-r flex flex-col items-end py-2 px-2 text-xs font-mono text-muted-foreground select-none overflow-hidden">
+      
+      {/* Editor body with line numbers and code */}
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+        {/* Line numbers gutter */}
+        <div 
+          className="flex-shrink-0 w-12 bg-muted/30 border-r flex flex-col items-end py-2 pr-3 pl-2 text-xs font-mono text-muted-foreground select-none overflow-y-auto"
+          aria-hidden="true"
+        >
           {lines.map((_, idx) => (
             <div
               key={idx}
               className={cn(
-                'leading-6 h-6',
+                'leading-6 h-6 w-full text-right',
                 errorLines.has(idx + 1) && 'text-destructive font-bold',
-                highlightedLine === idx + 1 && 'bg-primary/20 text-primary'
+                highlightedLine === idx + 1 && 'bg-primary/20 text-primary rounded-sm'
               )}
             >
               {idx + 1}
@@ -112,9 +121,9 @@ export function VibeCodeEditor({ code, onChange, issues, highlightedLine }: Vibe
           ))}
         </div>
 
-        {/* Editor area */}
-        <div className="flex-1 relative">
-          {/* Syntax highlighted display */}
+        {/* Code editor area */}
+        <div className="flex-1 relative min-w-0">
+          {/* Syntax highlighted overlay */}
           <div
             ref={highlightRef}
             className="absolute inset-0 p-2 font-mono text-sm leading-6 whitespace-pre overflow-auto pointer-events-none"
@@ -124,22 +133,26 @@ export function VibeCodeEditor({ code, onChange, issues, highlightedLine }: Vibe
               <div
                 key={idx}
                 className={cn(
-                  'h-6',
-                  errorLines.has(idx + 1) && 'bg-destructive/10 underline decoration-destructive decoration-wavy',
-                  highlightedLine === idx + 1 && 'bg-primary/20'
+                  'h-6 px-1',
+                  errorLines.has(idx + 1) && 'bg-destructive/10 border-l-2 border-destructive',
+                  highlightedLine === idx + 1 && 'bg-primary/20 border-l-2 border-primary'
                 )}
                 dangerouslySetInnerHTML={{ __html: highlightCode(line) || '&nbsp;' }}
               />
             ))}
           </div>
 
-          {/* Actual textarea */}
+          {/* Invisible textarea for input */}
           <textarea
             ref={textareaRef}
             value={code}
             onChange={(e) => onChange(e.target.value)}
-            className="absolute inset-0 w-full h-full p-2 font-mono text-sm leading-6 bg-transparent text-transparent caret-foreground resize-none focus:outline-none"
+            className="absolute inset-0 w-full h-full p-2 pl-3 font-mono text-sm leading-6 bg-transparent text-transparent caret-foreground resize-none focus:outline-none focus:ring-0"
             spellCheck={false}
+            autoCapitalize="off"
+            autoComplete="off"
+            autoCorrect="off"
+            aria-label="Editor de código VibeCode"
             placeholder="workflow MyWorkflow&#10;&#10;type ORDER&#10;retention LONG&#10;&#10;on CREATED {&#10;  set state = CANDIDATE&#10;}"
           />
         </div>
