@@ -3,7 +3,7 @@ import { VibeRule } from '@/types/vibecode';
 export const VALID_STATES = ['CANDIDATE', 'RUNNING', 'COOLING', 'DONE', 'ERROR'] as const;
 export const VALID_RETENTIONS = ['EPHEMERAL', 'LONG'] as const;
 export const VALID_COMMANDS = ['set', 'increase'] as const;
-export const FORBIDDEN_KEYWORDS = ['execute', 'run', 'trigger', 'call', 'if', 'else', 'while', 'for', 'delete', 'create', 'modify'] as const;
+export const FORBIDDEN_KEYWORDS = ['execute', 'run', 'trigger', 'call', 'if', 'loop', 'while', 'for', 'await', 'async'] as const;
 
 export const PER_RULES: VibeRule[] = [
   {
