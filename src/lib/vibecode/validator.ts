@@ -75,12 +75,13 @@ export function validateParsedCode(parsed: ParsedCode, rawCode: string): Validat
     }
   }
 
-  // RULE_PASSIVE_ONLY - check for forbidden keywords
+  // RULE_PASSIVE_ONLY - check for forbidden keywords using word-boundary matching
   const lines = rawCode.split('\n');
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].toLowerCase();
+    const line = lines[i];
     for (const keyword of FORBIDDEN_KEYWORDS) {
-      if (line.includes(keyword)) {
+      const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+      if (regex.test(line)) {
         issues.push({
           level: 'error',
           ruleId: 'RULE_PASSIVE_ONLY',
