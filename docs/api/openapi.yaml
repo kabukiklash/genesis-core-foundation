@@ -34,6 +34,10 @@ servers:
     description: Local Development
 
 tags:
+  - name: System
+    description: Operações do sistema (health, version)
+  - name: Workflows
+    description: Pré-visualização e validação de workflows
   - name: GPP
     description: Genesis Payload Protocol - Ingestão de dados
   - name: Cells
@@ -46,6 +50,78 @@ tags:
     description: Eventos em tempo real
 
 paths:
+  /health:
+    get:
+      tags:
+        - System
+      summary: Healthcheck
+      description: Verifica se o GenesisCore Runtime está operacional.
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: Sistema operacional
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded]
+                  version:
+                    type: string
+                  timestamp_ms:
+                    type: integer
+                    format: int64
+
+  /workflows/preview:
+    post:
+      tags:
+        - Workflows
+      summary: Pré-visualizar VibeCode
+      description: |
+        Valida e simula um workflow VibeCode sem persistir no sistema.
+        
+        Este endpoint permite que o Framework valide código antes do envio definitivo,
+        retornando erros de validação PER e uma simulação da GenesisCell resultante.
+        
+        **Importante**: Este endpoint NÃO modifica estado - é puramente passivo.
+      operationId: previewWorkflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowPreviewRequest'
+            example:
+              source: |
+                workflow OrderProcessing
+                type ORDER
+                retention LONG
+                
+                on CREATED {
+                  set state = CANDIDATE
+                  set friction = 5
+                }
+      responses:
+        '200':
+          description: Pré-visualização gerada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowPreviewResponse'
+        '400':
+          description: Código inválido ou violação PER
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PERViolationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
   /gpp/ingest:
     post:
       tags:
@@ -415,6 +491,44 @@ components:
             - type: string
             - type: integer
           description: Valor a definir
+
+    WorkflowPreviewRequest:
+      type: object
+      required:
+        - source
+      properties:
+        source:
+          type: string
+          description: Código VibeCode para validar e simular
+
+    WorkflowPreviewResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        status:
+          type: string
+          enum: [VALID, WARNING, ERROR]
+        issues:
+          type: array
+          items:
+            type: object
+            properties:
+              level:
+                type: string
+                enum: [error, warning]
+              ruleId:
+                type: string
+              message:
+                type: string
+              line:
+                type: integer
+        simulatedCell:
+          $ref: '#/components/schemas/GenesisCell'
+        gpp:
+          $ref: '#/components/schemas/GPPPayload'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
 
     IngestResponse:
       type: object

@@ -1,16 +1,20 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Send, PanelLeft, PanelRight } from 'lucide-react';
+import { Send, PanelLeft, PanelRight, Sparkles, X } from 'lucide-react';
 import { RulesPanel } from '@/components/vibecode/RulesPanel';
 import { VibeCodeEditor } from '@/components/vibecode/VibeCodeEditor';
 import { GenesisFeedbackPanel } from '@/components/vibecode/GenesisFeedbackPanel';
+import { ApprovalPanel } from '@/components/vibecode/ApprovalPanel';
+import { IntentInput } from '@/components/vibecode/IntentInput';
 import { useVibeValidation } from '@/hooks/useVibeValidation';
 import { getViolatedRules } from '@/lib/vibecode/validator';
+import { generateVibeCodeFromIntent, sendToGenesisCore, convertToGPP, AIGenerationResult } from '@/lib/vibecode/aiModule';
 import { ValidationIssue } from '@/types/vibecode';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const INITIAL_CODE = `workflow OrderProcessing
 
@@ -76,6 +80,14 @@ export default function VibeCodePage() {
   const [highlightedLine, setHighlightedLine] = useState<number | null>(null);
   const [highlightedRule, setHighlightedRule] = useState<string | null>(null);
   const [layout, setLayout] = useState<LayoutState>(loadLayout);
+  
+  // AI Module State
+  const [showIntentInput, setShowIntentInput] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiResult, setAiResult] = useState<AIGenerationResult | null>(null);
+  const [currentIntent, setCurrentIntent] = useState<string>('');
+  const [showApproval, setShowApproval] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validation = useVibeValidation(code);
   const violatedRules = getViolatedRules(validation.issues);
@@ -124,7 +136,102 @@ export default function VibeCodePage() {
     }
   }, [layout.leftVisible, layout.rightVisible]);
 
-  const canSubmit = validation.status !== 'ERROR';
+  // AI Module Handlers
+  const handleGenerateFromIntent = useCallback(async (intent: string) => {
+    setIsGenerating(true);
+    setCurrentIntent(intent);
+    
+    try {
+      const result = await generateVibeCodeFromIntent(intent);
+      setAiResult(result);
+      
+      if (result.success) {
+        setShowApproval(true);
+        setShowIntentInput(false);
+      } else {
+        toast.error('Erro na geração', {
+          description: result.error,
+        });
+      }
+    } catch (error) {
+      toast.error('Erro ao gerar código');
+      console.error(error);
+    } finally {
+      setIsGenerating(false);
+    }
+  }, []);
+
+  const handleApproveCode = useCallback(async () => {
+    if (!aiResult?.gpp) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      const result = await sendToGenesisCore(aiResult.gpp);
+      
+      if (result.success) {
+        setCode(aiResult.code);
+        setShowApproval(false);
+        setAiResult(null);
+        toast.success('Código aprovado e enviado', {
+          description: `GenesisCell criada: ${result.cellId}`,
+        });
+      } else {
+        toast.error('Erro ao enviar para GenesisCore', {
+          description: result.error,
+        });
+      }
+    } catch (error) {
+      toast.error('Erro de comunicação com GenesisCore');
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [aiResult]);
+
+  const handleRejectCode = useCallback(() => {
+    setShowApproval(false);
+    setAiResult(null);
+    toast.info('Código rejeitado');
+  }, []);
+
+  const handleEditCode = useCallback(() => {
+    if (aiResult) {
+      setCode(aiResult.code);
+      setShowApproval(false);
+      toast.info('Código carregado para edição manual');
+    }
+  }, [aiResult]);
+
+  const handleManualSubmit = useCallback(async () => {
+    const gpp = convertToGPP(code);
+    
+    if (!gpp) {
+      toast.error('Código inválido para envio');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const result = await sendToGenesisCore(gpp);
+      
+      if (result.success) {
+        toast.success('Enviado para GenesisCore', {
+          description: `GenesisCell criada: ${result.cellId}`,
+        });
+      } else {
+        toast.error('Erro ao enviar', { description: result.error });
+      }
+    } catch (error) {
+      toast.error('Erro de comunicação');
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [code]);
+
+  const canSubmit = validation.status !== 'ERROR' && !isSubmitting;
 
   // Calculate panel sizes based on visibility
   const getPanelSizes = () => {
@@ -170,9 +277,45 @@ export default function VibeCodePage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button disabled={!canSubmit} size="sm" className="gap-2">
-            <Send className="h-3.5 w-3.5" />
-            Enviar para GenesisCore
+          {/* AI Generate Button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={showIntentInput ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => setShowIntentInput(!showIntentInput)}
+                className="gap-2"
+              >
+                {showIntentInput ? (
+                  <X className="h-3.5 w-3.5" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                {showIntentInput ? 'Fechar' : 'Gerar com IA'}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              Gerar VibeCode a partir de descrição
+            </TooltipContent>
+          </Tooltip>
+
+          <Button 
+            disabled={!canSubmit} 
+            size="sm" 
+            className="gap-2"
+            onClick={handleManualSubmit}
+          >
+            {isSubmitting ? (
+              <>
+                <div className="h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                Enviando...
+              </>
+            ) : (
+              <>
+                <Send className="h-3.5 w-3.5" />
+                Enviar para GenesisCore
+              </>
+            )}
           </Button>
 
           {/* Right panel toggle */}
@@ -194,6 +337,31 @@ export default function VibeCodePage() {
           </Tooltip>
         </div>
       </header>
+
+      {/* Intent Input Panel */}
+      {showIntentInput && (
+        <div className="px-4 py-3 border-b bg-muted/30">
+          <IntentInput
+            onGenerate={handleGenerateFromIntent}
+            isGenerating={isGenerating}
+            className="max-w-2xl mx-auto"
+          />
+        </div>
+      )}
+
+      {/* Approval Panel Modal */}
+      {showApproval && aiResult && (
+        <ApprovalPanel
+          isOpen={showApproval}
+          generatedCode={aiResult.code}
+          validation={aiResult.validation}
+          intent={currentIntent}
+          onApprove={handleApproveCode}
+          onReject={handleRejectCode}
+          onEdit={handleEditCode}
+          isSubmitting={isSubmitting}
+        />
+      )}
 
       {/* Main IDE Layout */}
       <div className="flex-1 min-h-0">
