@@ -28,20 +28,24 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // VITE_GENESIS_API_URL must include /v1 (e.g., http://localhost:3000/v1)
 // Set VITE_GENESIS_USE_MOCK=false to use real API
 
-// Smart mock detection: use real backend on lovable.dev domains unless explicitly mocked
+// Smart mock detection: 
+// The Express backend (server/) does NOT run in Lovable's preview - only the Vite frontend runs.
+// So we use mocks by default, unless explicitly set to 'false' (for local dev with backend running).
 const isLovablePreview = typeof window !== 'undefined' && 
   (window.location.hostname.includes('lovable.dev') || 
    window.location.hostname.includes('lovableproject.com'));
 
 const getUseMock = (): boolean => {
   const envMock = import.meta.env.VITE_GENESIS_USE_MOCK;
-  // Explicit 'true' = use mock
-  if (envMock === 'true') return true;
-  // Explicit 'false' = use real
+  // Explicit 'false' = use real (requires backend running separately)
   if (envMock === 'false') return false;
-  // Not set: use real on Lovable, mock elsewhere (localhost)
-  return !isLovablePreview;
+  // Explicit 'true' OR not set = use mocks (safe default)
+  return true;
 };
+
+// Export for UI to show mode
+export const isUsingMock = getUseMock();
+export const isInLovablePreview = isLovablePreview;
 
 const API_CONFIG = {
   // Dynamic baseUrl: use origin on Lovable preview, fallback to localhost for dev
