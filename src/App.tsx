@@ -9,6 +9,7 @@ import CellsPage from "./pages/CellsPage";
 import CellDetailPage from "./pages/CellDetailPage";
 import RuntimePage from "./pages/RuntimePage";
 import VibeCodePage from "./pages/VibeCodePage";
+import BackendTestPage from "./pages/BackendTestPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/cells/:id" element={<CellDetailPage />} />
             <Route path="/runtime" element={<RuntimePage />} />
             <Route path="/vibecode" element={<VibeCodePage />} />
+            <Route path="/backend-test" element={<BackendTestPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

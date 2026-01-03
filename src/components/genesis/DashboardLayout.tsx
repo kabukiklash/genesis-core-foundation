@@ -10,6 +10,7 @@ import {
   Code,
   Menu,
   X,
+  FlaskConical,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -18,6 +19,7 @@ const navigation = [
   { name: 'GenesisCells', href: '/cells', icon: Boxes },
   { name: 'Runtime', href: '/runtime', icon: Activity },
   { name: 'VibeCode', href: '/vibecode', icon: Code },
+  { name: 'Backend Test', href: '/backend-test', icon: FlaskConical },
 ];
 
 export function DashboardLayout() {

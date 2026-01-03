@@ -27,9 +27,27 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // API Configuration - ready for real endpoints
 // VITE_GENESIS_API_URL must include /v1 (e.g., http://localhost:3000/v1)
 // Set VITE_GENESIS_USE_MOCK=false to use real API
+
+// Smart mock detection: use real backend on lovable.dev domains unless explicitly mocked
+const isLovablePreview = typeof window !== 'undefined' && 
+  (window.location.hostname.includes('lovable.dev') || 
+   window.location.hostname.includes('lovableproject.com'));
+
+const getUseMock = (): boolean => {
+  const envMock = import.meta.env.VITE_GENESIS_USE_MOCK;
+  // Explicit 'true' = use mock
+  if (envMock === 'true') return true;
+  // Explicit 'false' = use real
+  if (envMock === 'false') return false;
+  // Not set: use real on Lovable, mock elsewhere (localhost)
+  return !isLovablePreview;
+};
+
 const API_CONFIG = {
-  baseUrl: import.meta.env.VITE_GENESIS_API_URL || 'http://localhost:3000/v1',
-  useMock: import.meta.env.VITE_GENESIS_USE_MOCK !== 'false', // Default: mock enabled
+  // Dynamic baseUrl: use origin on Lovable preview, fallback to localhost for dev
+  baseUrl: import.meta.env.VITE_GENESIS_API_URL || 
+    (isLovablePreview ? `${window.location.origin}/v1` : 'http://localhost:3000/v1'),
+  useMock: getUseMock(),
   mockDelay: 300,
 };
 
