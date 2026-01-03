@@ -6,7 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Activity, Database, FileText, Heart, Send, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Activity, Database, FileText, Heart, Send, AlertCircle, CheckCircle2, Loader2, InfoIcon } from 'lucide-react';
+import { isUsingMock, isInLovablePreview } from '@/services/genesisApi';
 
 // Dynamic BASE_URL - uses origin for Lovable preview
 const getBaseUrl = () => `${window.location.origin}/v1`;
@@ -115,14 +117,46 @@ export default function BackendTestPage() {
   
   return (
     <div className="space-y-6">
+      {/* Mode Indicator */}
+      <Alert variant={isUsingMock ? "default" : "destructive"}>
+        <InfoIcon className="h-4 w-4" />
+        <AlertTitle className="flex items-center gap-2">
+          Modo: {isUsingMock ? "Mock (Simulado)" : "Backend Real"}
+          <Badge variant={isUsingMock ? "secondary" : "destructive"}>
+            {isUsingMock ? "MOCK" : "REAL"}
+          </Badge>
+        </AlertTitle>
+        <AlertDescription>
+          {isUsingMock ? (
+            <>
+              O backend Express (<code>server/</code>) <strong>não roda no preview do Lovable</strong>.
+              Os dados mostrados são simulados via mocks. Para testar o backend real,
+              rode <code>npm run server:dev</code> localmente.
+            </>
+          ) : (
+            <>
+              Tentando conectar ao backend real em <code>{BASE_URL}</code>.
+              Se não funcionar, o servidor pode estar offline.
+            </>
+          )}
+        </AlertDescription>
+      </Alert>
+      
       <div>
         <h1 className="text-2xl font-bold">Backend Test Console</h1>
         <p className="text-muted-foreground">
           Validação dos endpoints GenesisCore Runtime
         </p>
-        <Badge variant="outline" className="mt-2 font-mono text-xs">
-          Base URL: {BASE_URL}
-        </Badge>
+        <div className="flex gap-2 mt-2">
+          <Badge variant="outline" className="font-mono text-xs">
+            Base URL: {BASE_URL}
+          </Badge>
+          {isInLovablePreview && (
+            <Badge variant="secondary" className="text-xs">
+              Lovable Preview
+            </Badge>
+          )}
+        </div>
       </div>
       
       <div className="grid gap-6 md:grid-cols-2">
