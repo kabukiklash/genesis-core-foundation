@@ -179,14 +179,20 @@ Este documento mapeia todas as páginas, componentes, serviços e funcionalidade
 
 **Arquivo**: `src/services/genesisApi.ts`
 
-| Função | Endpoint (Futuro) | Descrição |
+**Configuração**: `VITE_GENESIS_API_URL` deve incluir `/v1` (ex: `http://localhost:3000/v1`)
+
+**Feature Flag**: `VITE_GENESIS_USE_MOCK=false` para usar API real (default: mock ativo)
+
+| Função | Endpoint (OpenAPI) | Descrição |
 |--------|-------------------|-----------|
-| `fetchCells(filters)` | `GET /v1/memory/cells` | Lista células com filtros |
-| `fetchCell(id)` | `GET /v1/memory/cells/:id` | Detalhe de célula |
-| `fetchCellHistory(cellId)` | `GET /v1/memory/cells/:id/history` | Histórico de transições |
-| `fetchRecentTransitions(limit)` | `GET /v1/memory/history` | Transições recentes |
-| `fetchRuntimeMetrics()` | `GET /v1/runtime/metrics` | Métricas atuais |
-| `fetchRuntimeTrends(hours)` | `GET /v1/runtime/trends` | Tendências históricas |
+| `fetchCells(filters)` | `GET /cells` | Lista células com filtros |
+| `fetchCell(id)` | `GET /cells/:id` | Detalhe de célula |
+| `fetchCellHistory(cellId)` | `GET /cells/:id/history` | Histórico de transições |
+| `fetchRecentTransitions(limit)` | `GET /log?type=state_changed` | Transições recentes (mapeado de LogEntry) |
+| `fetchRuntimeMetrics()` | `GET /metrics` | Métricas atuais |
+| `fetchRuntimeTrends(hours)` | `GET /metrics/trends?hours=N` | Tendências históricas |
+
+> **Nota**: Paths são relativos ao baseUrl que já inclui `/v1`.
 
 ---
 
