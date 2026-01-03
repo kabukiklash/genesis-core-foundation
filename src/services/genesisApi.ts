@@ -47,10 +47,14 @@ const getUseMock = (): boolean => {
 export const isUsingMock = getUseMock();
 export const isInLovablePreview = isLovablePreview;
 
+// Exported for external use (BackendTestPage, StatusIndicator, etc.)
+export function getApiBaseUrl(): string {
+  return import.meta.env.VITE_GENESIS_API_URL || 
+    (isLovablePreview ? `${window.location.origin}/v1` : 'http://localhost:3000/v1');
+}
+
 const API_CONFIG = {
-  // Dynamic baseUrl: use origin on Lovable preview, fallback to localhost for dev
-  baseUrl: import.meta.env.VITE_GENESIS_API_URL || 
-    (isLovablePreview ? `${window.location.origin}/v1` : 'http://localhost:3000/v1'),
+  baseUrl: getApiBaseUrl(),
   useMock: getUseMock(),
   mockDelay: 300,
 };
