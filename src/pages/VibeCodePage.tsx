@@ -40,6 +40,7 @@ on CLOSED {
 }`;
 
 const STORAGE_KEY = 'vibecode-layout';
+const CODE_STORAGE_KEY = 'vibecode-editor-content';
 
 interface LayoutState {
   leftVisible: boolean;
@@ -75,8 +76,28 @@ function saveLayout(layout: LayoutState) {
   }
 }
 
+function loadCode(): string {
+  try {
+    const saved = localStorage.getItem(CODE_STORAGE_KEY);
+    if (saved) {
+      return saved;
+    }
+  } catch (e) {
+    console.error('Failed to load code:', e);
+  }
+  return INITIAL_CODE;
+}
+
+function saveCode(code: string) {
+  try {
+    localStorage.setItem(CODE_STORAGE_KEY, code);
+  } catch (e) {
+    console.error('Failed to save code:', e);
+  }
+}
+
 export default function VibeCodePage() {
-  const [code, setCode] = useState(INITIAL_CODE);
+  const [code, setCode] = useState(loadCode);
   const [highlightedLine, setHighlightedLine] = useState<number | null>(null);
   const [highlightedRule, setHighlightedRule] = useState<string | null>(null);
   const [layout, setLayout] = useState<LayoutState>(loadLayout);
@@ -96,6 +117,11 @@ export default function VibeCodePage() {
   useEffect(() => {
     saveLayout(layout);
   }, [layout]);
+
+  // Persist code changes
+  useEffect(() => {
+    saveCode(code);
+  }, [code]);
 
   const handleIssueClick = useCallback((issue: ValidationIssue) => {
     setHighlightedLine(issue.line);
