@@ -71,17 +71,16 @@ router.get('/log', (req, res) => {
       };
     });
     
-    const response: PaginatedResponse<LogEntry> = {
+    // PR-04: Response envelope with data and meta (simplified format)
+    const response = {
       data: logEntries,
       meta: {
-        timestamp_ms: Date.now(),
-        version: '1.0.0',
-      },
-      pagination: {
-        total,
         page: pageNum,
         per_page: limitNum,
+        total,
         total_pages: Math.ceil(total / limitNum),
+        timestamp_ms: Date.now(),
+        version: '1.0.0',
       },
     };
     

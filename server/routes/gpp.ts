@@ -11,6 +11,7 @@ import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb, prepareStatements } from '../db.js';
 import type { GPPPayload, CellState } from '../types.js';
+import { EventTypes } from '../types.js';
 
 const router = Router();
 
@@ -59,7 +60,7 @@ router.post('/gpp/ingest', (req, res) => {
     // Record audit: gpp_ingested (append-only)
     stmts.insertAuditLog.run(
       uuidv4(),
-      'gpp_ingested',
+      EventTypes.GPP_INGESTED,
       tenantId,
       cellId,
       now,
@@ -69,27 +70,43 @@ router.post('/gpp/ingest', (req, res) => {
     // Record audit: cell_created (append-only)
     stmts.insertAuditLog.run(
       uuidv4(),
-      'cell_created',
+      EventTypes.CELL_CREATED,
       tenantId,
       cellId,
-      now,
+      now + 1, // +1ms to ensure ordering
       JSON.stringify({
         cell_id: cellId,
         type: payload.type,
         retention: payload.retention,
         intent: payload.intent,
+        version: 1,
       })
     );
     
     // Record cell history: initial state (append-only)
+    // PR-04: from_state = CANDIDATE for observable transition
     stmts.insertCellHistory.run(
       uuidv4(),
       cellId,
       tenantId,
-      null, // from_state (null for creation)
-      initialState,
+      initialState, // from_state = CANDIDATE (observable)
+      initialState, // to_state = CANDIDATE
       'ingest',
-      now
+      now + 2
+    );
+    
+    // PR-04: Record audit: state_changed (append-only, observable)
+    stmts.insertAuditLog.run(
+      uuidv4(),
+      EventTypes.STATE_CHANGED,
+      tenantId,
+      cellId,
+      now + 2,
+      JSON.stringify({
+        from_state: initialState,
+        to_state: initialState,
+        reason: 'ingest',
+      })
     );
     
     // Record initial friction (append-only)
@@ -98,8 +115,21 @@ router.post('/gpp/ingest', (req, res) => {
       cellId,
       tenantId,
       0,
-      now,
-      'initial'
+      now + 3,
+      'ingest'
+    );
+    
+    // PR-04: Record audit: friction_recorded (append-only)
+    stmts.insertAuditLog.run(
+      uuidv4(),
+      EventTypes.FRICTION_RECORDED,
+      tenantId,
+      cellId,
+      now + 3,
+      JSON.stringify({
+        friction: 0,
+        reason: 'ingest',
+      })
     );
     
     res.status(201).json({
