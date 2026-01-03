@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -6,9 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Activity, Database, FileText, Heart, Send, AlertCircle, CheckCircle2, Loader2, InfoIcon, Wifi, WifiOff } from 'lucide-react';
-import { getApiBaseUrl, isInLovablePreview } from '@/services/genesisApi';
+import { Activity, Database, FileText, Heart, Send, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { getApiBaseUrl } from '@/services/genesisApi';
 
 interface TestResult {
   endpoint: string;
@@ -22,8 +21,6 @@ interface TestResult {
 export default function BackendTestPage() {
   const [results, setResults] = useState<TestResult[]>([]);
   const [lastCellId, setLastCellId] = useState<string | null>(null);
-  const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
-  const [healthData, setHealthData] = useState<{ uptime_ms?: number } | null>(null);
   
   // Ingest form state
   const [ingestType, setIngestType] = useState('ORDER');
@@ -31,47 +28,6 @@ export default function BackendTestPage() {
   const [ingestIntent, setIngestIntent] = useState('Teste via BackendTest');
   
   const BASE_URL = getApiBaseUrl();
-  
-  // Check backend health on mount and periodically
-  useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        const response = await fetch(`${BASE_URL}/health`, {
-          method: 'GET',
-          headers: { 'Accept': 'application/json' },
-        });
-        if (response.ok) {
-          const contentType = response.headers.get('content-type');
-          if (contentType?.includes('application/json')) {
-            const data = await response.json();
-            setHealthData(data);
-            setBackendStatus('online');
-            return;
-          }
-        }
-        setBackendStatus('offline');
-        setHealthData(null);
-      } catch {
-        setBackendStatus('offline');
-        setHealthData(null);
-      }
-    };
-    
-    checkHealth();
-    const interval = setInterval(checkHealth, 10000); // Check every 10s
-    return () => clearInterval(interval);
-  }, [BASE_URL]);
-  
-  const formatUptime = (ms?: number): string => {
-    if (ms === undefined || ms === null || isNaN(ms)) return '—';
-    const totalSeconds = Math.floor(ms / 1000);
-    const days = Math.floor(totalSeconds / 86400);
-    const hours = Math.floor((totalSeconds % 86400) / 3600);
-    const mins = Math.floor((totalSeconds % 3600) / 60);
-    if (days > 0) return `${days}d ${hours}h`;
-    if (hours > 0) return `${hours}h ${mins}m`;
-    return `${mins}m`;
-  };
   
   const addResult = (result: TestResult) => {
     setResults(prev => [result, ...prev].slice(0, 20)); // Keep last 20 results
@@ -157,68 +113,6 @@ export default function BackendTestPage() {
   
   return (
     <div className="space-y-6">
-      {/* Runtime Status Indicator */}
-      <Alert 
-        variant="default" 
-        className={
-          backendStatus === 'online' 
-            ? 'border-green-500/50 bg-green-500/10' 
-            : backendStatus === 'checking'
-            ? 'border-yellow-500/50 bg-yellow-500/10'
-            : 'border-blue-500/50 bg-blue-500/10'
-        }
-      >
-        {backendStatus === 'online' ? (
-          <Wifi className="h-4 w-4 text-green-500" />
-        ) : backendStatus === 'checking' ? (
-          <Loader2 className="h-4 w-4 text-yellow-500 animate-spin" />
-        ) : (
-          <WifiOff className="h-4 w-4 text-blue-500" />
-        )}
-        <AlertTitle className="flex items-center gap-2">
-          {backendStatus === 'online' ? (
-            <>
-              ✅ Backend Online
-              <Badge variant="default" className="bg-green-600">CONNECTED</Badge>
-              <span className="text-sm font-normal text-muted-foreground ml-2">
-                Uptime: {formatUptime(healthData?.uptime_ms)}
-              </span>
-            </>
-          ) : backendStatus === 'checking' ? (
-            <>
-              Verificando conexão...
-              <Badge variant="secondary">CHECKING</Badge>
-            </>
-          ) : (
-            <>
-              🔒 Backend Offline - Usando Dados Simulados
-              <Badge variant="secondary">MOCK</Badge>
-            </>
-          )}
-        </AlertTitle>
-        <AlertDescription className="space-y-2">
-          {backendStatus === 'online' ? (
-            <p>
-              Conectado ao backend em <code className="bg-muted px-1 rounded">{BASE_URL}</code>. 
-              Os testes abaixo irão usar dados reais.
-            </p>
-          ) : backendStatus !== 'checking' && (
-            <>
-              <p>
-                O backend Express (<code className="bg-muted px-1 rounded">server/</code>) <strong>não está acessível</strong> em <code className="bg-muted px-1 rounded">{BASE_URL}</code>.
-                {isInLovablePreview && ' (O backend não roda no ambiente Lovable.)'}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Para testar integração real com o backend, execute localmente:
-              </p>
-              <pre className="bg-muted p-2 rounded text-xs mt-1">
-                cd server && npm install && npm run dev
-              </pre>
-            </>
-          )}
-        </AlertDescription>
-      </Alert>
-      
       <div>
         <h1 className="text-2xl font-bold">Backend Test Console</h1>
         <p className="text-muted-foreground">
@@ -228,11 +122,6 @@ export default function BackendTestPage() {
           <Badge variant="outline" className="font-mono text-xs">
             Base URL: {BASE_URL}
           </Badge>
-          {isInLovablePreview && (
-            <Badge variant="secondary" className="text-xs">
-              Lovable Preview
-            </Badge>
-          )}
         </div>
       </div>
       
