@@ -108,21 +108,23 @@ export function ApprovalPanel({
                   {showFullCode ? 'Recolher' : `Ver tudo (${codeLines.length} linhas)`}
                 </Button>
               </div>
-              <pre className="p-3 text-sm font-mono overflow-x-auto">
-                {previewLines.map((line, i) => (
-                  <div key={i} className="flex">
-                    <span className="w-8 text-muted-foreground text-right pr-3 select-none">
-                      {i + 1}
-                    </span>
-                    <code>{line}</code>
-                  </div>
-                ))}
-                {!showFullCode && hasMoreLines && (
-                  <div className="text-muted-foreground text-center mt-2">
-                    ... mais {codeLines.length - 10} linhas
-                  </div>
-                )}
-              </pre>
+              <div className={cn("overflow-x-auto", showFullCode && "max-h-64 overflow-y-auto")}>
+                <pre className="p-3 text-sm font-mono">
+                  {previewLines.map((line, i) => (
+                    <div key={i} className="flex">
+                      <span className="w-8 text-muted-foreground text-right pr-3 select-none">
+                        {i + 1}
+                      </span>
+                      <code>{line}</code>
+                    </div>
+                  ))}
+                  {!showFullCode && hasMoreLines && (
+                    <div className="text-muted-foreground text-center mt-2">
+                      ... mais {codeLines.length - 10} linhas
+                    </div>
+                  )}
+                </pre>
+              </div>
             </div>
 
             {/* Validation Issues */}
