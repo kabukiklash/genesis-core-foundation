@@ -118,27 +118,26 @@ export default function BackendTestPage() {
   return (
     <div className="space-y-6">
       {/* Mode Indicator */}
-      <Alert variant={isUsingMock ? "default" : "destructive"}>
-        <InfoIcon className="h-4 w-4" />
+      <Alert variant="default" className="border-blue-500/50 bg-blue-500/10">
+        <InfoIcon className="h-4 w-4 text-blue-500" />
         <AlertTitle className="flex items-center gap-2">
-          Modo: {isUsingMock ? "Mock (Simulado)" : "Backend Real"}
-          <Badge variant={isUsingMock ? "secondary" : "destructive"}>
-            {isUsingMock ? "MOCK" : "REAL"}
-          </Badge>
+          🔒 Backend Offline - Usando Dados Simulados
+          <Badge variant="secondary">MOCK</Badge>
         </AlertTitle>
-        <AlertDescription>
-          {isUsingMock ? (
-            <>
-              O backend Express (<code>server/</code>) <strong>não roda no preview do Lovable</strong>.
-              Os dados mostrados são simulados via mocks. Para testar o backend real,
-              rode <code>npm run server:dev</code> localmente.
-            </>
-          ) : (
-            <>
-              Tentando conectar ao backend real em <code>{BASE_URL}</code>.
-              Se não funcionar, o servidor pode estar offline.
-            </>
-          )}
+        <AlertDescription className="space-y-2">
+          <p>
+            O backend Express (<code className="bg-muted px-1 rounded">server/</code>) <strong>não roda no ambiente Lovable</strong> (preview ou publicado).
+            Apenas o frontend React é servido.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Para testar integração real com o backend, execute localmente:
+          </p>
+          <pre className="bg-muted p-2 rounded text-xs mt-1">
+            cd server && npm install && npm run dev
+          </pre>
+          <p className="text-sm text-muted-foreground mt-2">
+            Os botões abaixo funcionam apenas em ambiente local com o backend rodando.
+          </p>
         </AlertDescription>
       </Alert>
       
