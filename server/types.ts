@@ -4,6 +4,17 @@
 export type CellState = 'CANDIDATE' | 'RUNNING' | 'COOLING' | 'DONE' | 'ERROR';
 export type RetentionType = 'EPHEMERAL' | 'LONG';
 
+// Event Types (PR-04: Standardized Event Model)
+export const EventTypes = {
+  GPP_INGESTED: 'gpp_ingested',
+  CELL_CREATED: 'cell_created',
+  STATE_CHANGED: 'state_changed',
+  FRICTION_RECORDED: 'friction_recorded',
+  RUNTIME_SNAPSHOT: 'runtime_snapshot',
+} as const;
+
+export type EventType = typeof EventTypes[keyof typeof EventTypes];
+
 export interface GenesisCell {
   id: string;
   tenant_id: string | null;
