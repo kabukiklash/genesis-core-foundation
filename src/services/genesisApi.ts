@@ -1,5 +1,9 @@
 // GenesisCore API Service
 // Hybrid: Uses mock data now, prepared for real API integration
+//
+// IMPORTANT: VITE_GENESIS_API_URL should include "/v1" suffix
+// Example: http://localhost:3000/v1
+// Client paths are relative (without /v1 prefix)
 
 import type {
   GenesisCell,
@@ -21,14 +25,17 @@ import {
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // API Configuration - ready for real endpoints
+// VITE_GENESIS_API_URL must include /v1 (e.g., http://localhost:3000/v1)
+// Set VITE_GENESIS_USE_MOCK=false to use real API
 const API_CONFIG = {
   baseUrl: import.meta.env.VITE_GENESIS_API_URL || '',
-  useMock: true, // Toggle for real API
+  useMock: import.meta.env.VITE_GENESIS_USE_MOCK !== 'false', // Default: mock enabled
   mockDelay: 300,
 };
 
 // ===========================================
 // GenesisCells API
+// Endpoints: GET /cells, GET /cells/:id
 // ===========================================
 
 export async function fetchCells(filters?: CellFilters): Promise<GenesisCell[]> {
@@ -60,12 +67,12 @@ export async function fetchCells(filters?: CellFilters): Promise<GenesisCell[]> 
     return cells;
   }
   
-  // Real API call (future)
+  // Real API: GET /cells (baseUrl already includes /v1)
   const params = new URLSearchParams();
   if (filters?.state?.length) params.set('state', filters.state.join(','));
   if (filters?.retention?.length) params.set('retention', filters.retention.join(','));
   
-  const response = await fetch(`${API_CONFIG.baseUrl}/v1/memory/cells?${params}`);
+  const response = await fetch(`${API_CONFIG.baseUrl}/cells?${params}`);
   const data: ApiResponse<GenesisCell[]> = await response.json();
   return data.data;
 }
@@ -76,7 +83,8 @@ export async function fetchCell(id: string): Promise<GenesisCell | null> {
     return mockCells.find(c => c.id === id) || null;
   }
   
-  const response = await fetch(`${API_CONFIG.baseUrl}/v1/memory/cells/${id}`);
+  // Real API: GET /cells/:id
+  const response = await fetch(`${API_CONFIG.baseUrl}/cells/${id}`);
   if (!response.ok) return null;
   const data: ApiResponse<GenesisCell> = await response.json();
   return data.data;
@@ -84,6 +92,7 @@ export async function fetchCell(id: string): Promise<GenesisCell | null> {
 
 // ===========================================
 // State History API
+// Endpoints: GET /cells/:id/history, GET /log
 // ===========================================
 
 export async function fetchCellHistory(cellId: string): Promise<StateTransition[]> {
@@ -94,9 +103,25 @@ export async function fetchCellHistory(cellId: string): Promise<StateTransition[
       .sort((a, b) => a.timestamp_ms - b.timestamp_ms);
   }
   
-  const response = await fetch(`${API_CONFIG.baseUrl}/v1/memory/cells/${cellId}/history`);
+  // Real API: GET /cells/:id/history
+  const response = await fetch(`${API_CONFIG.baseUrl}/cells/${cellId}/history`);
   const data: ApiResponse<StateTransition[]> = await response.json();
   return data.data;
+}
+
+// LogEntry interface for /log endpoint response
+interface LogEntry {
+  id: string;
+  type: string;
+  cell_id: string;
+  timestamp_ms: number;
+  details?: {
+    from_state?: string;
+    to_state?: string;
+    reason?: string;
+    message?: string;
+    friction_at_transition?: number;
+  };
 }
 
 export async function fetchRecentTransitions(limit: number = 20): Promise<StateTransition[]> {
@@ -107,13 +132,27 @@ export async function fetchRecentTransitions(limit: number = 20): Promise<StateT
       .slice(0, limit);
   }
   
-  const response = await fetch(`${API_CONFIG.baseUrl}/v1/memory/history?limit=${limit}`);
-  const data: ApiResponse<StateTransition[]> = await response.json();
-  return data.data;
+  // Real API: GET /log?type=state_changed&per_page={limit}&page=1
+  // Maps LogEntry to StateTransition for UI compatibility
+  const response = await fetch(
+    `${API_CONFIG.baseUrl}/log?type=state_changed&per_page=${limit}&page=1`
+  );
+  const data: ApiResponse<LogEntry[]> = await response.json();
+  
+  // Map LogEntry to StateTransition (best-effort mapping)
+  return data.data.map((entry): StateTransition => ({
+    id: entry.id || `${entry.cell_id}-${entry.timestamp_ms}`,
+    cell_id: entry.cell_id,
+    from_state: (entry.details?.from_state as StateTransition['from_state']) || null,
+    to_state: (entry.details?.to_state as StateTransition['to_state']) || 'RUNNING',
+    friction_at_transition: entry.details?.friction_at_transition ?? 0,
+    timestamp_ms: entry.timestamp_ms,
+  }));
 }
 
 // ===========================================
 // Runtime Metrics API
+// Endpoints: GET /metrics, GET /metrics/trends
 // ===========================================
 
 export async function fetchRuntimeMetrics(): Promise<RuntimeMetrics> {
@@ -122,7 +161,8 @@ export async function fetchRuntimeMetrics(): Promise<RuntimeMetrics> {
     return { ...mockRuntimeMetrics, last_updated_ms: Date.now() };
   }
   
-  const response = await fetch(`${API_CONFIG.baseUrl}/v1/runtime/metrics`);
+  // Real API: GET /metrics
+  const response = await fetch(`${API_CONFIG.baseUrl}/metrics`);
   const data: ApiResponse<RuntimeMetrics> = await response.json();
   return data.data;
 }
@@ -133,7 +173,8 @@ export async function fetchRuntimeTrends(hours: number = 24): Promise<RuntimeTre
     return mockRuntimeTrends.slice(-hours);
   }
   
-  const response = await fetch(`${API_CONFIG.baseUrl}/v1/runtime/trends?hours=${hours}`);
+  // Real API: GET /metrics/trends?hours={hours}
+  const response = await fetch(`${API_CONFIG.baseUrl}/metrics/trends?hours=${hours}`);
   const data: ApiResponse<RuntimeTrend[]> = await response.json();
   return data.data;
 }
