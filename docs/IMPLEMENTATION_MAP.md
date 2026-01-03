@@ -30,9 +30,33 @@ Este documento mapeia todas as páginas, componentes, serviços e funcionalidade
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                      SERVICES LAYER                              │
-│  ├── genesisApi.ts          - API híbrida (mock + preparada)    │
+│  ├── genesisApi.ts          - API client (mock + real)          │
 │  └── mockData.ts            - Dados simulados                   │
 └─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  GENESISCORE RUNTIME (BACKEND)                   │
+│                      (Fase 3 - Passivo)                          │
+├─────────────────────────────────────────────────────────────────┤
+│  server/                                                         │
+│  ├── index.ts               - Entry point Express               │
+│  ├── db.ts                  - SQLite database layer             │
+│  ├── schema.sql             - Tables (cells, history, logs)     │
+│  ├── types.ts               - TypeScript types                  │
+│  └── routes/                - API endpoints                      │
+│      ├── health.ts          - GET /v1/health                    │
+│      ├── gpp.ts             - POST /v1/gpp/ingest               │
+│      ├── cells.ts           - GET /v1/cells, /:id, /:id/history │
+│      ├── log.ts             - GET /v1/log                       │
+│      └── metrics.ts         - GET /v1/metrics, /trends, /friction│
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌───────────────────┐
+                    │   SQLite (local)  │
+                    │   genesis.db      │
+                    └───────────────────┘
 ```
 
 ---
@@ -387,17 +411,25 @@ interface VibeRule { ... }
 
 ## 🚧 Pendências e Próximos Passos
 
+### Concluído Recentemente
+
+- [x] Backend GenesisCore Runtime (Fase 3 - Passivo)
+- [x] SQLite com schema completo (cells, history, logs)
+- [x] API REST seguindo OpenAPI spec
+- [x] Feature flag mock/real (`VITE_GENESIS_USE_MOCK`)
+
 ### Em Desenvolvimento
 
 - [ ] Conectar módulo de IA ao Lovable AI Gateway
-- [ ] Implementar backend real (Lovable Cloud)
 - [ ] Testes unitários para parser/validator
+- [ ] Testes de integração backend/frontend
 
 ### Planejado (Fase 4+)
 
 - [ ] WebSockets para atualizações em tempo real
 - [ ] Observer patterns
 - [ ] Análise de padrões de fricção
+- [ ] Migração para PostgreSQL (produção)
 
 ---
 

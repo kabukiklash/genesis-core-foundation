@@ -28,7 +28,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // VITE_GENESIS_API_URL must include /v1 (e.g., http://localhost:3000/v1)
 // Set VITE_GENESIS_USE_MOCK=false to use real API
 const API_CONFIG = {
-  baseUrl: import.meta.env.VITE_GENESIS_API_URL || '',
+  baseUrl: import.meta.env.VITE_GENESIS_API_URL || 'http://localhost:3000/v1',
   useMock: import.meta.env.VITE_GENESIS_USE_MOCK !== 'false', // Default: mock enabled
   mockDelay: 300,
 };
@@ -71,10 +71,15 @@ export async function fetchCells(filters?: CellFilters): Promise<GenesisCell[]> 
   const params = new URLSearchParams();
   if (filters?.state?.length) params.set('state', filters.state.join(','));
   if (filters?.retention?.length) params.set('retention', filters.retention.join(','));
+  if (filters?.search) params.set('q', filters.search);
   
   const response = await fetch(`${API_CONFIG.baseUrl}/cells?${params}`);
-  const data: ApiResponse<GenesisCell[]> = await response.json();
-  return data.data;
+  if (!response.ok) {
+    throw new Error(`Failed to fetch cells: ${response.status}`);
+  }
+  // Handle both direct array and paginated response
+  const json = await response.json();
+  return json.data || json;
 }
 
 export async function fetchCell(id: string): Promise<GenesisCell | null> {
@@ -137,10 +142,14 @@ export async function fetchRecentTransitions(limit: number = 20): Promise<StateT
   const response = await fetch(
     `${API_CONFIG.baseUrl}/log?type=state_changed&per_page=${limit}&page=1`
   );
-  const data: ApiResponse<LogEntry[]> = await response.json();
+  if (!response.ok) {
+    throw new Error(`Failed to fetch transitions: ${response.status}`);
+  }
+  const json = await response.json();
+  const entries: LogEntry[] = json.data || json;
   
   // Map LogEntry to StateTransition (best-effort mapping)
-  return data.data.map((entry): StateTransition => ({
+  return entries.map((entry): StateTransition => ({
     id: entry.id || `${entry.cell_id}-${entry.timestamp_ms}`,
     cell_id: entry.cell_id,
     from_state: (entry.details?.from_state as StateTransition['from_state']) || null,
@@ -163,8 +172,11 @@ export async function fetchRuntimeMetrics(): Promise<RuntimeMetrics> {
   
   // Real API: GET /metrics
   const response = await fetch(`${API_CONFIG.baseUrl}/metrics`);
-  const data: ApiResponse<RuntimeMetrics> = await response.json();
-  return data.data;
+  if (!response.ok) {
+    throw new Error(`Failed to fetch metrics: ${response.status}`);
+  }
+  const json = await response.json();
+  return json.data || json;
 }
 
 export async function fetchRuntimeTrends(hours: number = 24): Promise<RuntimeTrend[]> {
@@ -175,6 +187,9 @@ export async function fetchRuntimeTrends(hours: number = 24): Promise<RuntimeTre
   
   // Real API: GET /metrics/trends?hours={hours}
   const response = await fetch(`${API_CONFIG.baseUrl}/metrics/trends?hours=${hours}`);
-  const data: ApiResponse<RuntimeTrend[]> = await response.json();
-  return data.data;
+  if (!response.ok) {
+    throw new Error(`Failed to fetch trends: ${response.status}`);
+  }
+  const json = await response.json();
+  return json.data || json;
 }
