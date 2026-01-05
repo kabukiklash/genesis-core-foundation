@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# GenesisCore Runtime Artifacts
+server/*.db
+server/*.db-shm
+server/*.db-wal
+sse_output.txt
