@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,20 +20,20 @@ interface TestResult {
 }
 
 export default function BackendTestPage() {
-  const [results, setResults] = useState<TestResult[]>([]);
+  const [results, setResults] = useLocalStorage<TestResult[]>('genesis_test_results', []);
   const [lastCellId, setLastCellId] = useState<string | null>(null);
-  
+
   // Ingest form state
-  const [ingestType, setIngestType] = useState('ORDER');
-  const [ingestRetention, setIngestRetention] = useState('LONG');
-  const [ingestIntent, setIngestIntent] = useState('Teste via BackendTest');
-  
+  const [ingestType, setIngestType] = useLocalStorage('genesis_test_ingest_type', 'ORDER');
+  const [ingestRetention, setIngestRetention] = useLocalStorage('genesis_test_ingest_retention', 'LONG');
+  const [ingestIntent, setIngestIntent] = useLocalStorage('genesis_test_ingest_intent', 'Teste via BackendTest');
+
   const BASE_URL = getApiBaseUrl();
-  
+
   const addResult = (result: TestResult) => {
     setResults(prev => [result, ...prev].slice(0, 20)); // Keep last 20 results
   };
-  
+
   const runTest = async (
     name: string,
     endpoint: string,
@@ -40,21 +41,21 @@ export default function BackendTestPage() {
   ) => {
     const startTime = Date.now();
     addResult({ endpoint: name, status: 'loading' });
-    
+
     try {
       const response = await fetch(`${BASE_URL}${endpoint}`, {
         headers: { 'Content-Type': 'application/json' },
         ...options,
       });
-      
+
       const duration = Date.now() - startTime;
       const data = await response.json();
-      
+
       // Extract cell_id from ingest response
       if (name === 'POST /gpp/ingest' && data.cell_ids?.[0]) {
         setLastCellId(data.cell_ids[0]);
       }
-      
+
       addResult({
         endpoint: name,
         status: response.ok ? 'success' : 'error',
@@ -72,9 +73,9 @@ export default function BackendTestPage() {
       });
     }
   };
-  
+
   const testHealth = () => runTest('GET /health', '/health');
-  
+
   const testIngest = () => runTest(
     'POST /gpp/ingest',
     '/gpp/ingest',
@@ -87,22 +88,22 @@ export default function BackendTestPage() {
       }),
     }
   );
-  
+
   const testCells = () => runTest('GET /cells', '/cells?limit=10');
-  
+
   const testLog = () => runTest(
     'GET /log?type=state_changed',
     '/log?type=state_changed&per_page=20&page=1'
   );
-  
+
   const testMetrics = () => runTest('GET /metrics', '/metrics');
-  
+
   const testCellDetail = () => {
     if (lastCellId) {
       runTest(`GET /cells/${lastCellId.slice(0, 8)}...`, `/cells/${lastCellId}`);
     }
   };
-  
+
   const runAllTests = async () => {
     await testHealth();
     await testIngest();
@@ -110,7 +111,7 @@ export default function BackendTestPage() {
     await testLog();
     await testMetrics();
   };
-  
+
   return (
     <div className="space-y-6">
       <div>
@@ -124,7 +125,7 @@ export default function BackendTestPage() {
           </Badge>
         </div>
       </div>
-      
+
       <div className="grid gap-6 md:grid-cols-2">
         {/* Test Controls */}
         <Card>
@@ -156,9 +157,9 @@ export default function BackendTestPage() {
                 Metrics
               </Button>
             </div>
-            
+
             <Separator />
-            
+
             {/* Ingest Form */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">POST /gpp/ingest</Label>
@@ -203,7 +204,7 @@ export default function BackendTestPage() {
                 Ingest GPP
               </Button>
             </div>
-            
+
             {lastCellId && (
               <>
                 <Separator />
@@ -222,15 +223,15 @@ export default function BackendTestPage() {
                 </div>
               </>
             )}
-            
+
             <Separator />
-            
+
             <Button onClick={runAllTests} variant="default" className="w-full">
               Rodar Todos os Testes
             </Button>
           </CardContent>
         </Card>
-        
+
         {/* Results Panel */}
         <Card>
           <CardHeader>
@@ -304,7 +305,7 @@ export default function BackendTestPage() {
           </CardContent>
         </Card>
       </div>
-      
+
       {/* API Documentation */}
       <Card>
         <CardHeader>
@@ -318,19 +319,19 @@ export default function BackendTestPage() {
             <div className="space-y-1">
               <Label className="text-xs font-medium">Health Check</Label>
               <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
-{`GET ${BASE_URL}/health`}
+                {`GET ${BASE_URL}/health`}
               </pre>
             </div>
             <div className="space-y-1">
               <Label className="text-xs font-medium">Listar Cells</Label>
               <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
-{`GET ${BASE_URL}/cells`}
+                {`GET ${BASE_URL}/cells`}
               </pre>
             </div>
             <div className="space-y-1">
               <Label className="text-xs font-medium">Ingest GPP</Label>
               <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
-{`POST ${BASE_URL}/gpp/ingest
+                {`POST ${BASE_URL}/gpp/ingest
 Content-Type: application/json
 
 {
@@ -343,19 +344,19 @@ Content-Type: application/json
             <div className="space-y-1">
               <Label className="text-xs font-medium">Logs (State Changed)</Label>
               <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
-{`GET ${BASE_URL}/log?type=state_changed`}
+                {`GET ${BASE_URL}/log?type=state_changed`}
               </pre>
             </div>
             <div className="space-y-1">
               <Label className="text-xs font-medium">Métricas</Label>
               <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
-{`GET ${BASE_URL}/metrics`}
+                {`GET ${BASE_URL}/metrics`}
               </pre>
             </div>
             <div className="space-y-1">
               <Label className="text-xs font-medium">Trends</Label>
               <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
-{`GET ${BASE_URL}/metrics/trends?hours=24`}
+                {`GET ${BASE_URL}/metrics/trends?hours=24`}
               </pre>
             </div>
           </div>

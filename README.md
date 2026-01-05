@@ -70,4 +70,9 @@ Yes, you can!
 
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
+## Core Contracts
+
+- [Boundary Contract](docs/BOUNDARY_CONTRACT.md)
+- [Event Contract v1.0 (Frozen)](docs/contracts/GENESISCORE_EVENT_CONTRACT_v1.md)
+
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)

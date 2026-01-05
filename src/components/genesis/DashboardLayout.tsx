@@ -11,6 +11,7 @@ import {
   Menu,
   X,
   FlaskConical,
+  Brain,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -20,11 +21,12 @@ const navigation = [
   { name: 'Runtime', href: '/runtime', icon: Activity },
   { name: 'VibeCode', href: '/vibecode', icon: Code },
   { name: 'Backend Test', href: '/backend-test', icon: FlaskConical },
+  { name: 'Cognitive', href: '/cognitive', icon: Brain },
 ];
 
 export function DashboardLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
+
   const { data: metrics } = useQuery({
     queryKey: ['runtime-metrics'],
     queryFn: fetchRuntimeMetrics,
@@ -47,7 +49,7 @@ export function DashboardLayout() {
                 <Menu className="h-5 w-5" />
               )}
             </button>
-            
+
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-sm">G</span>

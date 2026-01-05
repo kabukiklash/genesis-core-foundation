@@ -1,0 +1,29 @@
+: heartbeat
+
+event: CELL_CREATED
+data: {"type":"cell_created","timestamp_ms":1767575556744,"cell_id":"56384995-5413-4005-95d0-e84cf00b0f33","details":{"type":"ORDER","retention":"LONG","intent":"Acceptance Test 1 - ORDER type"},"meta":{"version":"1.0.0"}}
+
+event: STATE_CHANGED
+data: {"type":"state_changed","timestamp_ms":1767575556745,"cell_id":"56384995-5413-4005-95d0-e84cf00b0f33","details":{"from_state":"CANDIDATE","to_state":"CANDIDATE","reason":"ingest"},"meta":{"version":"1.0.0"}}
+
+event: FRICTION_RECORDED
+data: {"type":"friction_recorded","timestamp_ms":1767575556746,"cell_id":"56384995-5413-4005-95d0-e84cf00b0f33","details":{"friction":0,"reason":"ingest"},"meta":{"version":"1.0.0"}}
+
+event: CELL_CREATED
+data: {"type":"cell_created","timestamp_ms":1767575556751,"cell_id":"8ee2281d-b92b-4579-820f-333d6d840fab","details":{"type":"PIPELINE","retention":"EPHEMERAL","intent":"Acceptance Test 2 - PIPELINE type"},"meta":{"version":"1.0.0"}}
+
+event: STATE_CHANGED
+data: {"type":"state_changed","timestamp_ms":1767575556752,"cell_id":"8ee2281d-b92b-4579-820f-333d6d840fab","details":{"from_state":"CANDIDATE","to_state":"CANDIDATE","reason":"ingest"},"meta":{"version":"1.0.0"}}
+
+event: FRICTION_RECORDED
+data: {"type":"friction_recorded","timestamp_ms":1767575556753,"cell_id":"8ee2281d-b92b-4579-820f-333d6d840fab","details":{"friction":0,"reason":"ingest"},"meta":{"version":"1.0.0"}}
+
+event: CELL_CREATED
+data: {"type":"cell_created","timestamp_ms":1767575556757,"cell_id":"be2ff1e4-67f8-4387-a850-0ca7d94b2996","details":{"type":"TASK","retention":"LONG","intent":"Acceptance Test 3 - TASK type"},"meta":{"version":"1.0.0"}}
+
+event: STATE_CHANGED
+data: {"type":"state_changed","timestamp_ms":1767575556758,"cell_id":"be2ff1e4-67f8-4387-a850-0ca7d94b2996","details":{"from_state":"CANDIDATE","to_state":"CANDIDATE","reason":"ingest"},"meta":{"version":"1.0.0"}}
+
+event: FRICTION_RECORDED
+data: {"type":"friction_recorded","timestamp_ms":1767575556759,"cell_id":"be2ff1e4-67f8-4387-a850-0ca7d94b2996","details":{"friction":0,"reason":"ingest"},"meta":{"version":"1.0.0"}}
+

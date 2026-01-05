@@ -17,6 +17,8 @@ import { gppRouter } from './routes/gpp.js';
 import { cellsRouter } from './routes/cells.js';
 import { logRouter } from './routes/log.js';
 import { metricsRouter } from './routes/metrics.js';
+import { streamRouter } from './routes/stream.js';
+import { cognitiveRouter } from './routes/cognitive.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -41,6 +43,8 @@ app.use('/v1', gppRouter);
 app.use('/v1', cellsRouter);
 app.use('/v1', logRouter);
 app.use('/v1', metricsRouter);
+app.use('/v1', streamRouter);
+app.use('/v1', cognitiveRouter);
 
 // 404 handler
 app.use((_req, res) => {
@@ -65,7 +69,7 @@ function start() {
     // Initialize database
     getDb();
     console.log('[GenesisCore] Database connected');
-    
+
     app.listen(PORT, () => {
       console.log(`
 ╔═══════════════════════════════════════════════════════════╗

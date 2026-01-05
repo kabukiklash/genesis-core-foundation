@@ -12,13 +12,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { getDb, prepareStatements } from '../db.js';
 import type { GPPPayload, CellState } from '../types.js';
 import { EventTypes } from '../types.js';
+import { eventBus } from '../eventBus.js';
 
 const router = Router();
 
 router.post('/gpp/ingest', (req, res) => {
   try {
     const payload: GPPPayload = req.body;
-    
+
     // Validate minimal required fields
     if (!payload.type) {
       return res.status(400).json({
@@ -26,7 +27,7 @@ router.post('/gpp/ingest', (req, res) => {
         error: 'Missing required field: type',
       });
     }
-    
+
     if (!payload.retention || !['EPHEMERAL', 'LONG'].includes(payload.retention)) {
       return res.status(400).json({
         ok: false,
@@ -37,12 +38,12 @@ router.post('/gpp/ingest', (req, res) => {
     const db = getDb();
     const stmts = prepareStatements(db);
     const now = Date.now();
-    
+
     // Generate new cell ID
     const cellId = uuidv4();
     const initialState: CellState = 'CANDIDATE';
     const tenantId = payload.tenant_id || null;
-    
+
     // Create the cell (PASSIVE: just store, no interpretation)
     stmts.insertCell.run(
       cellId,
@@ -56,7 +57,7 @@ router.post('/gpp/ingest', (req, res) => {
       now,
       now
     );
-    
+
     // Record audit: gpp_ingested (append-only)
     stmts.insertAuditLog.run(
       uuidv4(),
@@ -66,14 +67,14 @@ router.post('/gpp/ingest', (req, res) => {
       now,
       JSON.stringify(payload)
     );
-    
+
     // Record audit: cell_created (append-only)
     stmts.insertAuditLog.run(
       uuidv4(),
       EventTypes.CELL_CREATED,
       tenantId,
       cellId,
-      now + 1, // +1ms to ensure ordering
+      now + 1,
       JSON.stringify({
         cell_id: cellId,
         type: payload.type,
@@ -82,9 +83,20 @@ router.post('/gpp/ingest', (req, res) => {
         version: 1,
       })
     );
-    
+
+    // Emit for SSE
+    eventBus.emit({
+      type: EventTypes.CELL_CREATED,
+      timestamp_ms: now + 1,
+      cell_id: cellId,
+      details: {
+        type: payload.type,
+        retention: payload.retention,
+        intent: payload.intent,
+      }
+    });
+
     // Record cell history: initial state (append-only)
-    // PR-04: from_state = CANDIDATE for observable transition
     stmts.insertCellHistory.run(
       uuidv4(),
       cellId,
@@ -94,8 +106,8 @@ router.post('/gpp/ingest', (req, res) => {
       'ingest',
       now + 2
     );
-    
-    // PR-04: Record audit: state_changed (append-only, observable)
+
+    // Record audit: state_changed (append-only)
     stmts.insertAuditLog.run(
       uuidv4(),
       EventTypes.STATE_CHANGED,
@@ -108,8 +120,20 @@ router.post('/gpp/ingest', (req, res) => {
         reason: 'ingest',
       })
     );
-    
-    // Record initial friction (append-only)
+
+    // Emit for SSE
+    eventBus.emit({
+      type: EventTypes.STATE_CHANGED,
+      timestamp_ms: now + 2,
+      cell_id: cellId,
+      details: {
+        from_state: initialState,
+        to_state: initialState,
+        reason: 'ingest',
+      }
+    });
+
+    // Record initial friction
     stmts.insertFrictionHistory.run(
       uuidv4(),
       cellId,
@@ -118,8 +142,8 @@ router.post('/gpp/ingest', (req, res) => {
       now + 3,
       'ingest'
     );
-    
-    // PR-04: Record audit: friction_recorded (append-only)
+
+    // Record audit: friction_recorded
     stmts.insertAuditLog.run(
       uuidv4(),
       EventTypes.FRICTION_RECORDED,
@@ -131,7 +155,18 @@ router.post('/gpp/ingest', (req, res) => {
         reason: 'ingest',
       })
     );
-    
+
+    // Emit for SSE
+    eventBus.emit({
+      type: EventTypes.FRICTION_RECORDED,
+      timestamp_ms: now + 3,
+      cell_id: cellId,
+      details: {
+        friction: 0,
+        reason: 'ingest',
+      }
+    });
+
     res.status(201).json({
       ok: true,
       cell_ids: [cellId],

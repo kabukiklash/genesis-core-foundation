@@ -315,6 +315,7 @@ github.com/vibecode/framework
 
 - [ADR-001: Separation of Concerns](./adr/ADR-001-separation-of-concerns.md)
 - [ADR-003: GenesisCell Structure](./adr/ADR-003-genesis-cell-structure.md)
+- [Event Contract v1.0 (Frozen)](./contracts/GENESISCORE_EVENT_CONTRACT_v1.md)
 - [OpenAPI Specification](./api/openapi.yaml)
 
 ---
