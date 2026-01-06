@@ -15,10 +15,10 @@ router.get('/metrics', (_req, res) => {
   try {
     const db = getDb();
     const stmts = prepareStatements(db);
-    
+
     // Total cells
     const totalResult = stmts.countCells.get() as { count: number };
-    
+
     // Counts by state
     const stateResults = stmts.countByState.all() as { state: CellState; count: number }[];
     const countsByState: Record<CellState, number> = {
@@ -31,10 +31,10 @@ router.get('/metrics', (_req, res) => {
     stateResults.forEach(row => {
       countsByState[row.state] = row.count;
     });
-    
+
     // Average friction
     const avgResult = stmts.avgFriction.get() as { avg: number | null };
-    
+
     const metrics: RuntimeMetrics = {
       total_cells: totalResult.count,
       counts_by_state: countsByState,
@@ -45,10 +45,10 @@ router.get('/metrics', (_req, res) => {
       avg_execution_time_ms: 0,
       memory_usage_mb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
       active_scripts: 0,
-      status: 'online',
+      status: 'healthy',
       last_updated_ms: Date.now(),
     };
-    
+
     const response: ApiResponse<RuntimeMetrics> = {
       data: metrics,
       meta: {
@@ -56,7 +56,7 @@ router.get('/metrics', (_req, res) => {
         version: '1.0.0',
       },
     };
-    
+
     res.json(response);
   } catch (error) {
     console.error('[Metrics Error]', error);
@@ -70,10 +70,10 @@ router.get('/metrics/trends', (req, res) => {
     const db = getDb();
     const { hours = '24' } = req.query;
     const hoursNum = Math.min(parseInt(hours as string) || 24, 168); // Max 1 week
-    
+
     const now = Date.now();
     const startMs = now - (hoursNum * 60 * 60 * 1000);
-    
+
     // Get hourly aggregates of cell creations and friction
     const sql = `
       SELECT 
@@ -85,20 +85,20 @@ router.get('/metrics/trends', (req, res) => {
       GROUP BY hour_bucket
       ORDER BY hour_bucket ASC
     `;
-    
-    const results = db.prepare(sql).all(startMs) as { 
-      hour_bucket: number; 
-      cells_created: number; 
+
+    const results = db.prepare(sql).all(startMs) as {
+      hour_bucket: number;
+      cells_created: number;
       avg_friction: number | null;
     }[];
-    
+
     // Generate trend points for each hour
     const trends: TrendPoint[] = [];
     for (let h = 0; h < hoursNum; h++) {
       const hourMs = startMs + (h * 60 * 60 * 1000);
       const bucket = Math.floor(hourMs / 3600000) * 3600000;
       const match = results.find(r => r.hour_bucket === bucket);
-      
+
       trends.push({
         timestamp_ms: bucket,
         executions: 0, // Phase 3: not tracking WASM yet
@@ -108,7 +108,7 @@ router.get('/metrics/trends', (req, res) => {
         memory_mb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
       });
     }
-    
+
     const response: ApiResponse<TrendPoint[]> = {
       data: trends,
       meta: {
@@ -116,7 +116,7 @@ router.get('/metrics/trends', (req, res) => {
         version: '1.0.0',
       },
     };
-    
+
     res.json(response);
   } catch (error) {
     console.error('[Trends Error]', error);
@@ -130,7 +130,7 @@ router.get('/metrics/friction/:cellId', (req, res) => {
     const db = getDb();
     const stmts = prepareStatements(db);
     const { cellId } = req.params;
-    
+
     // Check if cell exists
     const cell = stmts.getCell.get(cellId);
     if (!cell) {
@@ -139,9 +139,9 @@ router.get('/metrics/friction/:cellId', (req, res) => {
         cell_id: cellId,
       });
     }
-    
+
     const history = stmts.getFrictionHistory.all(cellId) as FrictionHistoryEntry[];
-    
+
     const response: ApiResponse<FrictionHistoryEntry[]> = {
       data: history,
       meta: {
@@ -149,7 +149,7 @@ router.get('/metrics/friction/:cellId', (req, res) => {
         version: '1.0.0',
       },
     };
-    
+
     res.json(response);
   } catch (error) {
     console.error('[Friction History Error]', error);

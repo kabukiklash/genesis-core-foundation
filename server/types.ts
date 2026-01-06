@@ -106,7 +106,7 @@ export interface RuntimeMetrics {
   avg_execution_time_ms: number;
   memory_usage_mb: number;
   active_scripts: number;
-  status: 'online' | 'offline';
+  status: 'healthy' | 'offline';
   last_updated_ms: number;
 }
 

@@ -9,7 +9,7 @@ const startTime = Date.now();
 
 router.get('/health', (_req, res) => {
   res.json({
-    status: 'ok',
+    status: 'healthy',
     timestamp_ms: Date.now(),
     uptime_ms: Date.now() - startTime,
     version: '1.0.0',
