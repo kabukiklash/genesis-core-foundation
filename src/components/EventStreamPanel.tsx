@@ -100,6 +100,19 @@ export function EventStreamPanel() {
         return formatUptime(seconds);
     };
 
+    const getHealthScore = () => {
+        if (status !== 'connected') return 0;
+        const penalty = metrics.reconnectCount * 5;
+        return Math.max(20, 100 - penalty);
+    };
+
+    const getHealthColor = (score: number) => {
+        if (status !== 'connected') return 'text-status-offline';
+        if (score > 85) return 'text-status-online';
+        if (score > 50) return 'text-yellow-500';
+        return 'text-status-offline';
+    };
+
     const isSilent = (Date.now() - lastActivityAt) > 20000; // 20s gap detection
 
     return (
@@ -113,6 +126,12 @@ export function EventStreamPanel() {
                         {getStatusIcon()}
                         {status}
                     </div>
+                    {status === 'connected' && (
+                        <div className={cn("flex items-center gap-1 text-[10px] font-bold", getHealthColor(getHealthScore()))}>
+                            <Activity className="h-3 w-3" />
+                            {getHealthScore()}% HEALTH
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -184,7 +203,11 @@ export function EventStreamPanel() {
                     {avgLatency !== null && (
                         <span>Avg Latency: <span className="text-primary">{avgLatency}ms</span></span>
                     )}
-                    <span>Reconnects: <span className={cn(metrics.reconnectCount > 0 ? "text-status-offline" : "text-status-online")}>{metrics.reconnectCount}</span></span>
+                    {status === 'connected' ? (
+                        <span>Reconnects: <span className={cn(metrics.reconnectCount > 0 ? "text-status-offline" : "text-status-online")}>{metrics.reconnectCount}</span></span>
+                    ) : (
+                        <span className="animate-pulse text-status-offline italic">Retrying: Passive Backoff...</span>
+                    )}
                 </div>
                 <div className="flex items-center gap-4">
                     <span className={cn(isSilent ? "text-status-offline animate-pulse" : "text-status-online")}>
