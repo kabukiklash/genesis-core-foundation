@@ -4,6 +4,7 @@ import { getStateStats } from '@/services/mockData';
 import { MetricCard } from '@/components/genesis/MetricCard';
 import { CellCard } from '@/components/genesis/CellCard';
 import { CompactTimeline } from '@/components/genesis/Timeline';
+import { EventStreamPanel } from '@/components/EventStreamPanel';
 import { Activity, Cpu, HardDrive, Zap, Clock } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -31,9 +32,11 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Dashboard</h2>
-        <p className="text-muted-foreground">GenesisCore runtime overview — read-only</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-2xl font-bold">Dashboard</h2>
+          <p className="text-muted-foreground">GenesisCore runtime overview — read-only</p>
+        </div>
       </div>
 
       {/* Metrics Grid */}
@@ -56,9 +59,9 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-3">
         {/* Recent Cells */}
-        <div className="space-y-3">
+        <div className="lg:col-span-1 space-y-3">
           <h3 className="font-semibold">Recent GenesisCells</h3>
           <div className="grid gap-3">
             {cells.slice(0, 4).map(cell => <CellCard key={cell.id} cell={cell} />)}
@@ -66,9 +69,15 @@ export default function DashboardPage() {
         </div>
 
         {/* Timeline */}
-        <div className="space-y-3">
+        <div className="lg:col-span-1 space-y-3">
           <h3 className="font-semibold">Recent Activity</h3>
           <CompactTimeline transitions={transitions} />
+        </div>
+
+        {/* Event Stream (New) */}
+        <div className="lg:col-span-1 space-y-3">
+          <h3 className="font-semibold">Real-time Stream</h3>
+          <EventStreamPanel />
         </div>
       </div>
     </div>
