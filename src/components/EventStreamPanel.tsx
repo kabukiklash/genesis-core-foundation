@@ -6,6 +6,8 @@ import { Terminal, Activity, Wifi, WifiOff, AlertCircle, Trash2, ArrowDownCircle
 export function EventStreamPanel() {
     const [events, setEvents] = useState<SSEEvent[]>([]);
     const [status, setStatus] = useState<ConnectionStatus>('disconnected');
+    const [metrics, setMetrics] = useState({ reconnectCount: 0 });
+    const [avgLatency, setAvgLatency] = useState<number | null>(null);
     const [autoScroll, setAutoScroll] = useState(true);
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -14,14 +16,26 @@ export function EventStreamPanel() {
         sseClient.connect();
 
         // Subscribe to status
-        const unsubscribeStatus = sseClient.subscribeToStatus((newStatus) => {
+        const unsubscribeStatus = sseClient.subscribeToStatus((newStatus, newMetrics) => {
             setStatus(newStatus);
+            setMetrics(newMetrics);
         });
 
         // Subscribe to events
         const unsubscribeEvents = sseClient.subscribeToEvents((event) => {
             setEvents((prev) => {
                 const newEvents = [event, ...prev].slice(0, 200);
+
+                // Calculate latency (moving average of last 50)
+                const latencyEvents = newEvents
+                    .filter(e => e.receivedAt_ms && e.timestamp_ms)
+                    .slice(0, 50);
+
+                if (latencyEvents.length > 0) {
+                    const sum = latencyEvents.reduce((acc, e) => acc + (e.receivedAt_ms! - e.timestamp_ms), 0);
+                    setAvgLatency(Math.round(sum / latencyEvents.length));
+                }
+
                 return newEvents;
             });
         });
@@ -44,6 +58,7 @@ export function EventStreamPanel() {
 
     const clearEvents = () => {
         setEvents([]);
+        setAvgLatency(null);
     };
 
     const getStatusColor = () => {
@@ -128,7 +143,13 @@ export function EventStreamPanel() {
 
             {/* Footer */}
             <div className="px-4 py-1.5 border-t bg-muted/30 flex justify-between items-center text-[10px] text-muted-foreground uppercase font-medium">
-                <span>Buffer: {events.length} / 200</span>
+                <div className="flex gap-4">
+                    <span>Buffer: {events.length} / 200</span>
+                    {avgLatency !== null && (
+                        <span>Avg Latency: <span className="text-primary">{avgLatency}ms</span></span>
+                    )}
+                    <span>Reconnects: <span className={cn(metrics.reconnectCount > 0 ? "text-status-offline" : "text-status-online")}>{metrics.reconnectCount}</span></span>
+                </div>
                 <span className="flex items-center gap-1 italic">
                     <Activity className="h-3 w-3" />
                     Reactive Observation

@@ -5,6 +5,7 @@ export type ConnectionStatus = 'connected' | 'disconnected' | 'error';
 export interface SSEEvent {
     type: string;
     timestamp_ms: number;
+    receivedAt_ms?: number;
     cell_id?: string | null;
     details?: any;
     meta?: {
@@ -12,14 +13,19 @@ export interface SSEEvent {
     };
 }
 
+export interface SSEMetrics {
+    reconnectCount: number;
+}
+
 export type EventCallback = (event: SSEEvent) => void;
-export type StatusCallback = (status: ConnectionStatus) => void;
+export type StatusCallback = (status: ConnectionStatus, metrics: SSEMetrics) => void;
 
 class SSEClient {
     private eventSource: EventSource | null = null;
     private eventCallbacks: Set<EventCallback> = new Set();
     private statusCallbacks: Set<StatusCallback> = new Set();
     private status: ConnectionStatus = 'disconnected';
+    private reconnectCount: number = 0;
     private reconnectTimeout: number | null = null;
 
     constructor() {
@@ -66,6 +72,7 @@ class SSEClient {
             this.eventSource.onerror = (error) => {
                 console.error('[SSEClient] Connection error:', error);
                 this.updateStatus('error');
+                this.reconnectCount++;
                 this.disconnect();
                 this.scheduleReconnect();
             };
@@ -95,13 +102,15 @@ class SSEClient {
 
     public subscribeToStatus(callback: StatusCallback) {
         this.statusCallbacks.add(callback);
-        callback(this.status);
+        callback(this.status, { reconnectCount: this.reconnectCount });
         return () => this.statusCallbacks.delete(callback);
     }
 
     private handleMessage(event: MessageEvent) {
+        const receivedAt = Date.now();
         try {
             const data = JSON.parse(event.data);
+            data.receivedAt_ms = receivedAt;
             this.eventCallbacks.forEach(cb => cb(data));
         } catch (err) {
             console.warn('[SSEClient] Malformed event payload:', event.data);
@@ -109,6 +118,7 @@ class SSEClient {
             const fallbackEvent: SSEEvent = {
                 type: 'RAW_PAYLOAD',
                 timestamp_ms: Date.now(),
+                receivedAt_ms: receivedAt,
                 details: { raw: String(event.data).substring(0, 500) },
                 meta: { version: '0.0.0' }
             };
@@ -118,7 +128,7 @@ class SSEClient {
 
     private updateStatus(newStatus: ConnectionStatus) {
         this.status = newStatus;
-        this.statusCallbacks.forEach(cb => cb(newStatus));
+        this.statusCallbacks.forEach(cb => cb(newStatus, { reconnectCount: this.reconnectCount }));
     }
 
     private scheduleReconnect() {
