@@ -31,16 +31,18 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // Smart mock detection: 
 // The Express backend (server/) does NOT run in Lovable's preview - only the Vite frontend runs.
 // So we use mocks by default, unless explicitly set to 'false' (for local dev with backend running).
-const isLovablePreview = typeof window !== 'undefined' && 
-  (window.location.hostname.includes('lovable.dev') || 
-   window.location.hostname.includes('lovableproject.com'));
+const isLovablePreview = typeof window !== 'undefined' &&
+  (window.location.hostname.includes('lovable.dev') ||
+    window.location.hostname.includes('lovableproject.com'));
 
 const getUseMock = (): boolean => {
   const envMock = import.meta.env.VITE_GENESIS_USE_MOCK;
-  // Explicit 'false' = use real (requires backend running separately)
+  // Explicit 'false' = use real
   if (envMock === 'false') return false;
-  // Explicit 'true' OR not set = use mocks (safe default)
-  return true;
+  // Explicit 'true' = use mocks
+  if (envMock === 'true') return true;
+  // Default: use real on localhost, mocks on Lovable
+  return isLovablePreview;
 };
 
 // Export for UI to show mode
@@ -49,7 +51,7 @@ export const isInLovablePreview = isLovablePreview;
 
 // Exported for external use (BackendTestPage, StatusIndicator, etc.)
 export function getApiBaseUrl(): string {
-  return import.meta.env.VITE_GENESIS_API_URL || 
+  return import.meta.env.VITE_GENESIS_API_URL ||
     (isLovablePreview ? `${window.location.origin}/v1` : 'http://localhost:3000/v1');
 }
 
@@ -67,9 +69,9 @@ const API_CONFIG = {
 export async function fetchCells(filters?: CellFilters): Promise<GenesisCell[]> {
   if (API_CONFIG.useMock) {
     await delay(API_CONFIG.mockDelay);
-    
+
     let cells = [...mockCells];
-    
+
     if (filters?.state?.length) {
       cells = cells.filter(c => filters.state!.includes(c.state));
     }
@@ -84,21 +86,21 @@ export async function fetchCells(filters?: CellFilters): Promise<GenesisCell[]> 
     }
     if (filters?.search) {
       const search = filters.search.toLowerCase();
-      cells = cells.filter(c => 
+      cells = cells.filter(c =>
         c.id.toLowerCase().includes(search) ||
         c.intent?.toLowerCase().includes(search)
       );
     }
-    
+
     return cells;
   }
-  
+
   // Real API: GET /cells (baseUrl already includes /v1)
   const params = new URLSearchParams();
   if (filters?.state?.length) params.set('state', filters.state.join(','));
   if (filters?.retention?.length) params.set('retention', filters.retention.join(','));
   if (filters?.search) params.set('q', filters.search);
-  
+
   const response = await fetch(`${API_CONFIG.baseUrl}/cells?${params}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch cells: ${response.status}`);
@@ -113,7 +115,7 @@ export async function fetchCell(id: string): Promise<GenesisCell | null> {
     await delay(API_CONFIG.mockDelay);
     return mockCells.find(c => c.id === id) || null;
   }
-  
+
   // Real API: GET /cells/:id
   const response = await fetch(`${API_CONFIG.baseUrl}/cells/${id}`);
   if (!response.ok) return null;
@@ -133,7 +135,7 @@ export async function fetchCellHistory(cellId: string): Promise<StateTransition[
       .filter(t => t.cell_id === cellId)
       .sort((a, b) => a.timestamp_ms - b.timestamp_ms);
   }
-  
+
   // Real API: GET /cells/:id/history
   const response = await fetch(`${API_CONFIG.baseUrl}/cells/${cellId}/history`);
   const data: ApiResponse<StateTransition[]> = await response.json();
@@ -162,7 +164,7 @@ export async function fetchRecentTransitions(limit: number = 20): Promise<StateT
       .sort((a, b) => b.timestamp_ms - a.timestamp_ms)
       .slice(0, limit);
   }
-  
+
   // Real API: GET /log?type=state_changed&per_page={limit}&page=1
   // Maps LogEntry to StateTransition for UI compatibility
   const response = await fetch(
@@ -173,7 +175,7 @@ export async function fetchRecentTransitions(limit: number = 20): Promise<StateT
   }
   const json = await response.json();
   const entries: LogEntry[] = json.data || json;
-  
+
   // Map LogEntry to StateTransition (best-effort mapping)
   return entries.map((entry): StateTransition => ({
     id: entry.id || `${entry.cell_id}-${entry.timestamp_ms}`,
@@ -195,14 +197,18 @@ export async function fetchRuntimeMetrics(): Promise<RuntimeMetrics> {
     await delay(API_CONFIG.mockDelay);
     return { ...mockRuntimeMetrics, last_updated_ms: Date.now() };
   }
-  
+
   // Real API: GET /metrics
   const response = await fetch(`${API_CONFIG.baseUrl}/metrics`);
   if (!response.ok) {
     throw new Error(`Failed to fetch metrics: ${response.status}`);
   }
   const json = await response.json();
-  return json.data || json;
+  const data = json.data || json;
+  if (data && data.status === 'healthy') {
+    data.status = 'online';
+  }
+  return data;
 }
 
 export async function fetchRuntimeTrends(hours: number = 24): Promise<RuntimeTrend[]> {
@@ -210,7 +216,7 @@ export async function fetchRuntimeTrends(hours: number = 24): Promise<RuntimeTre
     await delay(API_CONFIG.mockDelay);
     return mockRuntimeTrends.slice(-hours);
   }
-  
+
   // Real API: GET /metrics/trends?hours={hours}
   const response = await fetch(`${API_CONFIG.baseUrl}/metrics/trends?hours=${hours}`);
   if (!response.ok) {
