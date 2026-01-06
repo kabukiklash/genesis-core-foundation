@@ -8,6 +8,9 @@ export function EventStreamPanel() {
     const [status, setStatus] = useState<ConnectionStatus>('disconnected');
     const [metrics, setMetrics] = useState({ reconnectCount: 0 });
     const [avgLatency, setAvgLatency] = useState<number | null>(null);
+    const [sessionStartTime] = useState(Date.now());
+    const [lastActivityAt, setLastActivityAt] = useState<number>(Date.now());
+    const [sessionUptime, setSessionUptime] = useState(0);
     const [autoScroll, setAutoScroll] = useState(true);
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -15,14 +18,21 @@ export function EventStreamPanel() {
         // Connect on mount
         sseClient.connect();
 
+        // Uptime timer
+        const timer = setInterval(() => {
+            setSessionUptime(Math.floor((Date.now() - sessionStartTime) / 1000));
+        }, 1000);
+
         // Subscribe to status
         const unsubscribeStatus = sseClient.subscribeToStatus((newStatus, newMetrics) => {
             setStatus(newStatus);
             setMetrics(newMetrics);
+            if (newStatus === 'connected') setLastActivityAt(Date.now());
         });
 
         // Subscribe to events
         const unsubscribeEvents = sseClient.subscribeToEvents((event) => {
+            setLastActivityAt(Date.now());
             setEvents((prev) => {
                 const newEvents = [event, ...prev].slice(0, 200);
 
@@ -42,11 +52,9 @@ export function EventStreamPanel() {
 
         // Disconnect on unmount
         return () => {
+            clearInterval(timer);
             unsubscribeStatus();
             unsubscribeEvents();
-            // We don't necessarily disconnect sseClient here if we want it to persist across pages,
-            // but the requirement says "cleanup safe when unmounting".
-            // Given it's a singleton, let's just unsubscribe.
         };
     }, []);
 
@@ -76,6 +84,23 @@ export function EventStreamPanel() {
             default: return <WifiOff className="h-4 w-4" />;
         }
     };
+
+    const formatUptime = (s: number) => {
+        if (s < 60) return `${s}s`;
+        const m = Math.floor(s / 60);
+        const rem = s % 60;
+        return `${m}m ${rem}s`;
+    };
+
+    const getHistorySpan = () => {
+        if (events.length < 2) return null;
+        const newest = events[0].timestamp_ms;
+        const oldest = events[events.length - 1].timestamp_ms;
+        const seconds = Math.floor((newest - oldest) / 1000);
+        return formatUptime(seconds);
+    };
+
+    const isSilent = (Date.now() - lastActivityAt) > 20000; // 20s gap detection
 
     return (
         <div className="flex flex-col h-[400px] rounded-lg border bg-card overflow-hidden shadow-sm">
@@ -151,17 +176,25 @@ export function EventStreamPanel() {
 
             {/* Footer */}
             <div className="px-4 py-1.5 border-t bg-muted/30 flex justify-between items-center text-[10px] text-muted-foreground uppercase font-medium">
-                <div className="flex gap-4">
+                <div className="flex gap-4 items-center">
                     <span>Buffer: {events.length} / 200</span>
+                    {getHistorySpan() && (
+                        <span>Span: <span className="text-primary">{getHistorySpan()}</span></span>
+                    )}
                     {avgLatency !== null && (
                         <span>Avg Latency: <span className="text-primary">{avgLatency}ms</span></span>
                     )}
                     <span>Reconnects: <span className={cn(metrics.reconnectCount > 0 ? "text-status-offline" : "text-status-online")}>{metrics.reconnectCount}</span></span>
                 </div>
-                <span className="flex items-center gap-1 italic">
-                    <Activity className="h-3 w-3" />
-                    Reactive Observation
-                </span>
+                <div className="flex items-center gap-4">
+                    <span className={cn(isSilent ? "text-status-offline animate-pulse" : "text-status-online")}>
+                        Session: {formatUptime(sessionUptime)}
+                    </span>
+                    <span className="flex items-center gap-1 italic">
+                        <Activity className="h-3 w-3" />
+                        Reactive Observation
+                    </span>
+                </div>
             </div>
         </div>
     );
