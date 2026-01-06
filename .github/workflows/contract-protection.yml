@@ -1,0 +1,22 @@
+name: Boundary Contract Protection
+
+on:
+  pull_request:
+    paths:
+      - 'docs/BOUNDARY_CONTRACT.md'
+    types: [labeled, unlabeled, opened, synchronized, reopened]
+
+jobs:
+  check-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for contract-change label
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const labels = context.payload.pull_request.labels.map(l => l.name);
+            if (!labels.includes('contract-change')) {
+              core.setFailed('PR modifies docs/BOUNDARY_CONTRACT.md but missing mandatory "contract-change" label.');
+            } else {
+              console.log('Contract-change label detected. Validation passed.');
+            }
