@@ -122,22 +122,30 @@ export function EventStreamPanel() {
                         <p>Waiting for events...</p>
                     </div>
                 ) : (
-                    events.map((event, idx) => (
-                        <div
-                            key={`${event.timestamp_ms}-${idx}`}
-                            className="flex items-start gap-2 py-1 px-2 rounded hover:bg-accent/30 transition-colors border-l-2 border-transparent hover:border-primary/50"
-                        >
-                            <span className="text-muted-foreground shrink-0 tabular-nums">
-                                [{new Date(event.timestamp_ms).toLocaleTimeString()}]
-                            </span>
-                            <span className="font-bold text-primary shrink-0 uppercase tracking-tighter">
-                                {event.type}
-                            </span>
-                            <span className="text-foreground/80 break-all line-clamp-2">
-                                {JSON.stringify(event.details || event)}
-                            </span>
-                        </div>
-                    ))
+                    events.map((event, idx) => {
+                        const drift = event.receivedAt_ms ? (event.receivedAt_ms - event.timestamp_ms) : 0;
+                        return (
+                            <div
+                                key={`${event.timestamp_ms}-${idx}`}
+                                className="flex items-start gap-2 py-1 px-2 rounded hover:bg-accent/30 transition-colors border-l-2 border-transparent hover:border-primary/50 group"
+                            >
+                                <span className="text-muted-foreground shrink-0 tabular-nums" title={`Received at: ${event.receivedAt_ms ? new Date(event.receivedAt_ms).toLocaleTimeString() : 'N/A'}`}>
+                                    [{new Date(event.timestamp_ms).toLocaleTimeString()}]
+                                </span>
+                                <span className="font-bold text-primary shrink-0 uppercase tracking-tighter">
+                                    {event.type}
+                                </span>
+                                <span className="text-foreground/80 break-all line-clamp-2 flex-1">
+                                    {JSON.stringify(event.details || event)}
+                                </span>
+                                {drift > 0 && (
+                                    <span className="text-[9px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity tabular-nums whitespace-nowrap">
+                                        drift: +{drift}ms
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })
                 )}
             </div>
 
